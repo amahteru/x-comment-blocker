@@ -113,10 +113,10 @@ async function syncCloudKeywords() {
     const newETag = resp.headers.get('ETag') || '';
 
     const cloudList = parseKeywords(text);
-    
+
     // Clean up stale disabled keywords
     const { disabledCloudKeywords = [] } = await chrome.storage.local.get('disabledCloudKeywords');
-    const cleanedDisabled = disabledCloudKeywords.filter(kw => cloudList.includes(kw));
+    const cleanedDisabled = disabledCloudKeywords.filter((kw) => cloudList.includes(kw));
 
     await chrome.storage.local.set({
       cloudKeywords: cloudList.join('\n'),
