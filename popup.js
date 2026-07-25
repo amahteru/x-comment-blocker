@@ -659,7 +659,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Clean up autoBlockKeywords (remove words that are no longer in either list)
   const allValidKeywords = [...userKeywords, ...parseKeywords(items.cloudKeywords || '')];
+  const originalAutoBlockLength = autoBlockKeywords.length;
   autoBlockKeywords = autoBlockKeywords.filter((kw) => allValidKeywords.includes(kw));
+  if (originalAutoBlockLength !== autoBlockKeywords.length) {
+    chrome.storage.local.set({ autoBlockKeywords });
+  }
   
   checkUsernameEl.checked = items.checkUsername;
   onlyCommentsEl.checked = items.onlyComments;

@@ -49,7 +49,9 @@ async function mergeKeywords() {
       : [];
 
     const blockKeywords = [...new Set([...cloudKws, ...userKws])];
-    const autoBlockKws = items.autoBlockKeywords || [];
+    const rawAutoBlockKws = items.autoBlockKeywords || [];
+    const activeBlockSet = new Set(blockKeywords);
+    const autoBlockKws = rawAutoBlockKws.filter((kw) => activeBlockSet.has(kw));
 
     const newKey = blockKeywords.join('\n') + '|AUTO:|' + autoBlockKws.join('\n');
     if (newKey === lastKeywordsKey) return;
