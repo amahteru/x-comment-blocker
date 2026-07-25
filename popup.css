@@ -274,10 +274,6 @@ body {
   opacity: 0.5;
 }
 
-.keyword-tag.is-disabled .tag-text {
-  text-decoration: line-through;
-}
-
 .keyword-tag.is-autoblock {
   border-color: rgba(239, 68, 68, 0.4);
   background: rgba(239, 68, 68, 0.1);
