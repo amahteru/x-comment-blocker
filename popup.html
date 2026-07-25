@@ -55,15 +55,15 @@
   </div>
 
   <div class="control-group">
-    <label for="cloudToggle" style="display: flex; align-items: center; gap: 8px">
+    <div id="openCloudModalBtn" style="display: flex; align-items: center; gap: 8px; cursor: pointer;" title="查看云端词库">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
         <path d="M12 12v9"></path>
         <path d="m8 17 4 4 4-4"></path>
       </svg>
-      云端词库
-    </label>
+      <span style="font-size: 13px; font-weight: 500;">云端词库</span>
+    </div>
     <span class="cloud-info" id="cloudInfo"></span>
     <button class="icon-btn" id="sync-btn" title="同步云端词库">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -174,6 +174,39 @@
       <div class="control-group">
         <label for="blockEmoji">屏蔽带emoji的评论</label>
         <input type="checkbox" id="blockEmoji" />
+      </div>
+    </div>
+  </div>
+
+  <div class="history-modal" id="cloudModal">
+    <div class="history-header">
+      <div style="display: flex; align-items: baseline; gap: 4px">
+        <span>云端词库</span>
+        <span class="history-subtitle" id="cloudModalSubtitle"></span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; position: relative;">
+        <button class="icon-btn" id="toggleCloudSearchBtn" title="搜索云端词库">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+        <button class="icon-btn history-close" id="closeCloud" title="关闭">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="history-search-container" id="cloudSearchContainer">
+      <input type="text" id="cloudSearchInput" placeholder="搜索屏蔽词..." />
+    </div>
+    <div style="flex: 1; overflow-y: auto; padding: 12px 20px 0;">
+      <div class="keyword-list" id="cloudKeywordList" style="max-height: none; padding: 0 0 24px 0; gap: 10px; overflow: visible;">
+        <div class="empty-hint">暂无云端屏蔽词</div>
       </div>
     </div>
   </div>

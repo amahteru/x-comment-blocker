@@ -10,6 +10,8 @@ const ICON_DEL =
   '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
 const ICON_CHECK =
   '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+const ICON_BAN =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>';
 
 const keywordList = document.getElementById('keywordList');
 const keywordCount = document.getElementById('keywordCount');
@@ -37,6 +39,19 @@ const viewHistoryBtn = document.getElementById('viewHistory');
 const historyModal = document.getElementById('historyModal');
 const closeHistoryBtn = document.getElementById('closeHistory');
 const historyList = document.getElementById('historyList');
+
+const openCloudModalBtn = document.getElementById('openCloudModalBtn');
+const cloudModal = document.getElementById('cloudModal');
+const closeCloudBtn = document.getElementById('closeCloud');
+const cloudKeywordList = document.getElementById('cloudKeywordList');
+const cloudModalSubtitle = document.getElementById('cloudModalSubtitle');
+
+const toggleCloudSearchBtn = document.getElementById('toggleCloudSearchBtn');
+const cloudSearchContainer = document.getElementById('cloudSearchContainer');
+const cloudSearchInput = document.getElementById('cloudSearchInput');
+
+let currentCloudSearchQuery = '';
+let cloudSearchDebounceTimer = null;
 
 let statusTimer = 0;
 function showStatus(text) {
@@ -419,6 +434,102 @@ function updateCloudInfo() {
       }
     });
 }
+
+function renderCloudKeywords() {
+  chrome.storage.local
+    .get(getStorageDefaults('cloudKeywords', 'disabledCloudKeywords'))
+    .then((items) => {
+      let cloudList = parseKeywords(items.cloudKeywords);
+      let disabledList = items.disabledCloudKeywords || [];
+
+      if (currentCloudSearchQuery !== '') {
+        cloudList = cloudList.filter(kw => kw.toLowerCase().includes(currentCloudSearchQuery));
+      }
+
+      cloudKeywordList.innerHTML = '';
+
+      if (cloudList.length === 0) {
+        cloudKeywordList.appendChild(
+          el('div', { className: 'empty-hint', textContent: currentCloudSearchQuery ? '没有找到匹配的屏蔽词' : '暂无云端屏蔽词' }),
+        );
+        if (currentCloudSearchQuery) {
+          cloudModalSubtitle.textContent = `(搜索到 ${cloudList.length} 个词)`;
+        } else {
+          cloudModalSubtitle.textContent = '';
+        }
+        return;
+      }
+
+      cloudModalSubtitle.textContent = currentCloudSearchQuery ? `(搜索到 ${cloudList.length} 个词)` : `(共 ${cloudList.length} 个词)`;
+      const fragment = document.createDocumentFragment();
+
+      cloudList.forEach((kw) => {
+        const isRegex = isKeywordRegex(kw);
+        const textSpan = el('span', { className: 'tag-text', textContent: kw, title: kw });
+        
+        highlightText(textSpan, currentCloudSearchQuery);
+
+        const isDisabled = disabledList.includes(kw);
+        const banBtn = el('button', {
+          className: 'tag-btn tag-btn-del',
+          innerHTML: ICON_BAN,
+          title: isDisabled ? '取消禁用' : '禁用',
+          onclick: () => {
+            if (isDisabled) {
+              disabledList = disabledList.filter(k => k !== kw);
+            } else {
+              disabledList.push(kw);
+            }
+            chrome.storage.local.set({ disabledCloudKeywords: disabledList });
+            renderCloudKeywords();
+          }
+        });
+
+        const tag = el(
+          'span',
+          {
+            className: 'keyword-tag' + (isRegex ? ' regex-tag' : '') + (isDisabled ? ' is-disabled' : ''),
+            style: 'width: calc(50% - 5px);'
+          },
+          [textSpan, banBtn]
+        );
+        fragment.appendChild(tag);
+      });
+
+      cloudKeywordList.appendChild(fragment);
+    });
+}
+
+if (toggleCloudSearchBtn && cloudSearchContainer && cloudSearchInput) {
+  toggleCloudSearchBtn.addEventListener('click', () => {
+    const isOpen = cloudSearchContainer.classList.toggle('open');
+    if (isOpen) {
+      cloudSearchInput.focus();
+    } else {
+      clearTimeout(cloudSearchDebounceTimer);
+      cloudSearchInput.value = '';
+      if (currentCloudSearchQuery !== '') {
+        currentCloudSearchQuery = '';
+        renderCloudKeywords();
+      }
+    }
+  });
+
+  cloudSearchInput.addEventListener('input', (e) => {
+    currentCloudSearchQuery = e.target.value.toLowerCase();
+    clearTimeout(cloudSearchDebounceTimer);
+    cloudSearchDebounceTimer = setTimeout(() => renderCloudKeywords(), 200);
+  });
+}
+
+openCloudModalBtn.addEventListener('click', () => {
+  renderCloudKeywords();
+  cloudModal.classList.add('open');
+});
+
+closeCloudBtn.addEventListener('click', () => {
+  cloudModal.classList.remove('open');
+});
 
 async function triggerCloudSync(manual = false) {
   try {

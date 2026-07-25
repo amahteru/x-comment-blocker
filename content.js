@@ -33,11 +33,14 @@ function matchesAutoBlocklist(text) {
 async function mergeKeywords() {
   try {
     const items = await chrome.storage.local.get(
-      getStorageDefaults('keywords', 'cloudEnabled', 'cloudKeywords', 'autoBlockKeywords'),
+      getStorageDefaults('keywords', 'cloudEnabled', 'cloudKeywords', 'autoBlockKeywords', 'disabledCloudKeywords'),
     );
 
     const userKws = parseKeywords(items.keywords);
-    const cloudKws = items.cloudEnabled ? parseKeywords(items.cloudKeywords) : [];
+    const disabledCloudKws = items.disabledCloudKeywords || [];
+    const cloudKws = items.cloudEnabled 
+      ? parseKeywords(items.cloudKeywords).filter(kw => !disabledCloudKws.includes(kw))
+      : [];
 
     const blockKeywords = [...new Set([...cloudKws, ...userKws])];
     const autoBlockKws = items.autoBlockKeywords || [];
@@ -205,10 +208,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 
   if (
+    changes.keywords ||
     changes.cloudEnabled ||
     changes.cloudKeywords ||
-    changes.keywords ||
-    changes.autoBlockKeywords
+    changes.autoBlockKeywords ||
+    changes.disabledCloudKeywords
   ) {
     mergeKeywords().then(() => {
       filterVersion++;

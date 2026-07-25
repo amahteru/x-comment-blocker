@@ -34,6 +34,7 @@ const STORAGE_DEFAULTS = {
   blockedUsersOnX: [],
   historyFilterReason: 'all',
   autoBlockKeywords: [],
+  disabledCloudKeywords: [],
   autoBlockQueue: [],
   autoBlockToday: 0,
   autoBlockLastDate: '',
@@ -112,8 +113,14 @@ async function syncCloudKeywords() {
     const newETag = resp.headers.get('ETag') || '';
 
     const cloudList = parseKeywords(text);
+    
+    // Clean up stale disabled keywords
+    const { disabledCloudKeywords = [] } = await chrome.storage.local.get('disabledCloudKeywords');
+    const cleanedDisabled = disabledCloudKeywords.filter(kw => cloudList.includes(kw));
+
     await chrome.storage.local.set({
       cloudKeywords: cloudList.join('\n'),
+      disabledCloudKeywords: cleanedDisabled,
       cloudETag: newETag,
       lastSyncTime: Date.now(),
       syncStatus: 'ok',
