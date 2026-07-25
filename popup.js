@@ -518,8 +518,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 resetCountBtn.addEventListener('click', async () => {
   await chrome.runtime.sendMessage({ action: 'clearSpamCache' }).catch(() => {});
-  await chrome.storage.local.set({ blockedCount: 0, blockedHistory: [] });
-  blockedCountEl.textContent = '0';
 });
 
 let currentHistory = [];

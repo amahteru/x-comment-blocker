@@ -278,6 +278,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'clearSpamCache') {
     storageQueue.enqueue(async () => {
       globalSpamCache.clear();
+      await chrome.storage.local.set({ blockedCount: 0, blockedHistory: [] });
     });
     notifyContentScripts({ action: 'clearLocalSentIds' });
     sendResponse({ success: true });
