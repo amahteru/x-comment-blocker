@@ -1,9 +1,20 @@
-/* exported SYNC_INTERVAL_MS, syncCloudKeywords, parseKeywords, getStorageDefaults, invisibleCharsRegex, SYNC_INTERVAL_MINUTES */
+/* exported SYNC_INTERVAL_MS, syncCloudKeywords, parseKeywords, getStorageDefaults, invisibleCharsRegex, SYNC_INTERVAL_MINUTES, extractCleanScreenName */
 const CLOUD_KEYWORDS_URL =
   'https://api.github.com/repos/ethanzhou-dev/x-comment-blocker/contents/keywords.txt';
 const SYNC_INTERVAL_MINUTES = 360;
 const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
 const invisibleCharsRegex = /[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
+
+function extractCleanScreenName(input) {
+  if (!input) return '';
+  const cleaned = input.replace(invisibleCharsRegex, '').trim();
+  const match = cleaned.match(/(?:^|\/|@)([a-zA-Z0-9_]{1,15})(?:\/|\?|$)/);
+  if (match) return match[1].toLowerCase();
+  return cleaned
+    .replace(/^[@/]+/, '')
+    .split(/[/?]/)[0]
+    .toLowerCase();
+}
 
 const STORAGE_DEFAULTS = {
   keywords: '',
@@ -23,6 +34,10 @@ const STORAGE_DEFAULTS = {
   blockedUsersOnX: [],
   historyFilterReason: 'all',
   autoBlockKeywords: [],
+  autoBlockQueue: [],
+  autoBlockToday: 0,
+  autoBlockLastDate: '',
+  autoBlockPausedUntil: 0,
 };
 
 function getStorageDefaults(...keys) {

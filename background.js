@@ -71,6 +71,11 @@ chrome.runtime.onInstalled.addListener(async () => {
     periodInMinutes: SYNC_INTERVAL_MINUTES,
   });
 
+  chrome.alarms.create('autoBlockWatchdog', {
+    delayInMinutes: 1,
+    periodInMinutes: 1,
+  });
+
   await chrome.contextMenus.removeAll();
   chrome.contextMenus.create({
     id: 'addToBlocklist',
@@ -83,69 +88,183 @@ chrome.runtime.onInstalled.addListener(async () => {
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_NAME) {
     doSync();
+  } else if (alarm.name === 'autoBlockWatchdog') {
+    if (typeof autoBlockManager !== 'undefined') {
+      autoBlockManager.process();
+    }
   }
 });
 
-class AutoBlockQueue {
+class AutoBlockManager {
   constructor() {
-    this.queue = [];
     this.isProcessing = false;
     this.dailyLimit = 100;
-    this.delayMs = 3000;
+    this.minDelayMs = 5000;
+    this.maxDelayMs = 10000;
+
+    this.queue = [];
+    this.blockedUsersSet = new Set();
     this.countToday = 0;
-    this.lastDate = new Date().toDateString();
+    this.lastDate = '';
+    this.pausedUntil = 0;
+    this.initialized = false;
+    this.initPromise = null;
   }
 
-  enqueue(screenName) {
-    if (this.queue.includes(screenName)) return;
-    this.queue.push(screenName);
-    this.process();
+  async init() {
+    if (this.initialized) return;
+    if (!this.initPromise) {
+      this.initPromise = (async () => {
+        const defaults = getStorageDefaults(
+          'autoBlockQueue',
+          'autoBlockToday',
+          'autoBlockLastDate',
+          'autoBlockPausedUntil',
+          'blockedUsersOnX',
+        );
+        const items = await chrome.storage.local.get(defaults);
+
+        this.queue = items.autoBlockQueue || [];
+        this.countToday = items.autoBlockToday || 0;
+        this.lastDate = items.autoBlockLastDate || '';
+        this.pausedUntil = items.autoBlockPausedUntil || 0;
+        this.blockedUsersSet = new Set(items.blockedUsersOnX || []);
+
+        const today = new Date().toDateString();
+        if (this.lastDate !== today) {
+          this.lastDate = today;
+          this.countToday = 0;
+          await this.saveState({
+            autoBlockLastDate: this.lastDate,
+            autoBlockToday: this.countToday,
+          });
+        }
+
+        this.initialized = true;
+      })();
+    }
+    await this.initPromise;
+  }
+
+  async saveState(updates) {
+    await chrome.storage.local.set(updates);
+  }
+
+  async enqueueBatch(screenNames) {
+    await this.init();
+    if (!screenNames || screenNames.length === 0) return;
+
+    let changed = false;
+    for (const screenName of screenNames) {
+      const cleanName = extractCleanScreenName(screenName);
+      if (cleanName && !this.queue.includes(cleanName) && !this.blockedUsersSet.has(cleanName)) {
+        this.queue.push(cleanName);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await this.saveState({ autoBlockQueue: this.queue });
+      this.process();
+    }
   }
 
   async process() {
     if (this.isProcessing) return;
     this.isProcessing = true;
-    while (this.queue.length > 0) {
-      const today = new Date().toDateString();
-      if (this.lastDate !== today) {
-        this.lastDate = today;
-        this.countToday = 0;
-      }
-      
-      if (this.countToday >= this.dailyLimit) {
-        this.queue = [];
-        console.warn('[X-Blocker] Auto block daily limit reached.');
-        break;
-      }
 
-      const screenName = this.queue.shift();
-      try {
-        await handleBlockUser(screenName, true);
-        this.countToday++;
-      } catch (e) {
-        console.error('[X-Blocker] Auto block error:', e);
+    try {
+      await this.init();
+
+      while (true) {
+        const today = new Date().toDateString();
+        if (this.lastDate !== today) {
+          this.lastDate = today;
+          this.countToday = 0;
+          await this.saveState({
+            autoBlockLastDate: this.lastDate,
+            autoBlockToday: this.countToday,
+          });
+        }
+
+        if (this.pausedUntil > Date.now()) {
+          console.warn(
+            `[X-Blocker] Auto block paused for ${Math.ceil((this.pausedUntil - Date.now()) / 1000)}s.`,
+          );
+          break;
+        }
+
+        if (this.countToday >= this.dailyLimit) {
+          console.warn('[X-Blocker] Auto block daily limit reached.');
+          break;
+        }
+
+        if (this.queue.length === 0) break;
+
+        const currentItem = this.queue[0];
+
+        try {
+          const res = await handleBlockUser(currentItem, true);
+          if (res && res.success) {
+            this.queue.shift();
+            this.countToday++;
+            this.blockedUsersSet.add(currentItem);
+
+            let blockedUsersArray = Array.from(this.blockedUsersSet);
+            if (blockedUsersArray.length > 5000) {
+              blockedUsersArray = blockedUsersArray.slice(-5000);
+              this.blockedUsersSet = new Set(blockedUsersArray);
+            }
+
+            await this.saveState({
+              autoBlockQueue: this.queue,
+              autoBlockToday: this.countToday,
+              blockedUsersOnX: blockedUsersArray,
+            });
+          } else if (
+            res &&
+            res.reason &&
+            (res.reason.includes('429') || res.reason.includes('HTTP 429'))
+          ) {
+            console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
+            this.pausedUntil = Date.now() + 15 * 60 * 1000;
+            await this.saveState({ autoBlockPausedUntil: this.pausedUntil });
+            break;
+          } else {
+            console.error(
+              '[X-Blocker] Auto block failed for',
+              currentItem,
+              res ? res.reason : 'unknown',
+            );
+            this.queue.shift();
+            await this.saveState({ autoBlockQueue: this.queue });
+          }
+        } catch (e) {
+          console.error('[X-Blocker] Auto block task execution error:', e);
+          this.queue.shift();
+          await this.saveState({ autoBlockQueue: this.queue });
+        }
+
+        if (this.queue.length > 0) {
+          const delay =
+            Math.floor(Math.random() * (this.maxDelayMs - this.minDelayMs + 1)) + this.minDelayMs;
+          await new Promise((r) => setTimeout(r, delay));
+        }
       }
-      
-      if (this.queue.length > 0) {
-        await new Promise(r => setTimeout(r, this.delayMs));
-      }
+    } finally {
+      this.isProcessing = false;
     }
-    this.isProcessing = false;
   }
 }
 
-const autoBlockQueue = new AutoBlockQueue();
+var autoBlockManager = new AutoBlockManager();
+autoBlockManager.init().then(() => autoBlockManager.process());
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   void sender;
   if (message.action === 'syncNow') {
     doSync().then(sendResponse);
     return true;
-  }
-  if (message.action === 'autoBlockUser') {
-    autoBlockQueue.enqueue(message.screenName);
-    sendResponse({ success: true });
-    return false;
   }
   if (message.action === 'blockUserOnX') {
     handleBlockUser(message.screenName, true).then(sendResponse);
@@ -226,6 +345,7 @@ function handleRecordSpam(items) {
           displayName: item.displayName,
           reason: item.reason,
           time: item.time,
+          isAutoBlock: item.isAutoBlock,
         });
         if (globalSpamCache.size > 5000) {
           const iter = globalSpamCache.values();
@@ -239,6 +359,12 @@ function handleRecordSpam(items) {
     const storageItems = await chrome.storage.local.get(
       getStorageDefaults('blockedCount', 'blockedHistory'),
     );
+
+    const autoBlockScreenNames = newSpams.filter((s) => s.isAutoBlock).map((s) => s.user);
+    if (autoBlockScreenNames.length > 0) {
+      autoBlockManager.enqueueBatch(autoBlockScreenNames);
+    }
+
     const history = storageItems.blockedHistory || [];
     const historyIds = new Set(history.map((h) => h.id));
     const uniqueSpams = newSpams.filter((s) => !historyIds.has(s.id));
@@ -259,6 +385,10 @@ function handleRecordSpam(items) {
 
 async function handleBlockUser(screenName, isBlock) {
   try {
+    const cleanName = extractCleanScreenName(screenName);
+    if (!cleanName) {
+      return { success: false, reason: '无效的用户名' };
+    }
     const cookie = await chrome.cookies.get({
       url: 'https://x.com',
       name: 'ct0',
@@ -276,11 +406,11 @@ async function handleBlockUser(screenName, isBlock) {
     const response = await fetch(`https://x.com/i/api/1.1/blocks/${endpoint}`, {
       method: 'POST',
       headers,
-      body: `screen_name=${encodeURIComponent(screenName)}`,
+      body: `screen_name=${encodeURIComponent(cleanName)}`,
     });
 
     if (response.ok) {
-      return { success: true };
+      return { success: true, screenName: cleanName };
     } else {
       return { success: false, reason: `请求失败: HTTP ${response.status}` };
     }

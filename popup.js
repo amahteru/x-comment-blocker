@@ -141,7 +141,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
     document.querySelector('.keyword-stats').style.display = 'none';
     return;
   }
-  
+
   document.querySelector('.keyword-stats').style.display = 'flex';
 
   const fragment = document.createDocumentFragment();
@@ -172,7 +172,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
 
     const isRegex = isKeywordRegex(kw);
     const isAutoBlock = autoBlockKeywords.includes(kw);
-    
+
     let tagChildren = [];
     if (isEditingAutoBlock) {
       const checkbox = el('input', {
@@ -185,11 +185,15 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
           } else {
             autoBlockKeywords = autoBlockKeywords.filter((k) => k !== kw);
           }
-        }
+        },
       });
       tagChildren = [el('span', { className: 'tag-text', textContent: kw, title: kw }), checkbox];
     } else {
-      tagChildren = [el('span', { className: 'tag-text', textContent: kw, title: kw }), editBtn, delBtn];
+      tagChildren = [
+        el('span', { className: 'tag-text', textContent: kw, title: kw }),
+        editBtn,
+        delBtn,
+      ];
     }
 
     const tag = el(
@@ -202,7 +206,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
           (index === animateIndex ? ' fade-in-tag' : '') +
           (index === fadeIndex ? ' fade-in' : ''),
       },
-      tagChildren
+      tagChildren,
     );
 
     if (!isEditingAutoBlock) {
@@ -489,9 +493,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   userKeywords = parseKeywords(items.keywords);
   autoBlockKeywords = items.autoBlockKeywords || [];
-  
+
   // Clean up autoBlockKeywords (remove words that are no longer in userKeywords)
-  autoBlockKeywords = autoBlockKeywords.filter(kw => userKeywords.includes(kw));
+  autoBlockKeywords = autoBlockKeywords.filter((kw) => userKeywords.includes(kw));
   checkUsernameEl.checked = items.checkUsername;
   onlyCommentsEl.checked = items.onlyComments;
   blockSpecialCharsEl.checked = items.blockSpecialChars;
@@ -711,9 +715,9 @@ function renderHistoryPage() {
     const userInfo = document.createElement('div');
     userInfo.className = 'history-item-user-info';
 
-    if (item.user && item.user.startsWith('/')) {
-      const handle = item.user.substring(1);
+    const handle = extractCleanScreenName(item.user);
 
+    if (handle) {
       if (item.displayName) {
         const nameSpan = document.createElement('span');
         nameSpan.className = 'history-display-name';
@@ -793,11 +797,11 @@ function renderHistoryPage() {
     };
     actionsDiv.appendChild(removeBtn);
 
-    if (item.user && item.user.startsWith('/')) {
+    if (handle) {
       const blockBtn = document.createElement('button');
       blockBtn.className = 'btn-block-x';
 
-      const screenName = item.user.substring(1);
+      const screenName = handle;
       blockBtn.dataset.screenName = screenName;
 
       const updateBtnState = () => {

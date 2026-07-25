@@ -45,11 +45,12 @@ async function mergeKeywords() {
     if (newKey === lastKeywordsKey) return;
     lastKeywordsKey = newKey;
 
-    if (blockKeywords.length > 0) {
+    function buildRegexes(keywords) {
+      if (!keywords || keywords.length === 0) return [];
       const plainKeywords = [];
       const customRegexes = [];
 
-      for (const kw of blockKeywords) {
+      for (const kw of keywords) {
         let match;
         if (kw.startsWith('/') && (match = kw.match(/^\/(.+)\/([a-zA-Z]*)$/))) {
           try {
@@ -62,55 +63,24 @@ async function mergeKeywords() {
         }
       }
 
-      blockRegexes = [];
+      const regexes = [];
       if (plainKeywords.length > 0) {
         const escaped = plainKeywords.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
         escaped.sort((a, b) => b.length - a.length);
         const CHUNK_SIZE = 400;
         for (let i = 0; i < escaped.length; i += CHUNK_SIZE) {
           const chunk = escaped.slice(i, i + CHUNK_SIZE);
-          blockRegexes.push(new RegExp(chunk.join('|'), 'i'));
+          regexes.push(new RegExp(chunk.join('|'), 'i'));
         }
       }
       if (customRegexes.length > 0) {
-        blockRegexes.push(...customRegexes);
+        regexes.push(...customRegexes);
       }
-    } else {
-      blockRegexes = [];
+      return regexes;
     }
-    
-    const autoBlockKws = items.autoBlockKeywords || [];
-    if (autoBlockKws.length > 0) {
-      const plainAutoBlock = [];
-      const customAutoBlockRegexes = [];
 
-      for (const kw of autoBlockKws) {
-        let match;
-        if (kw.startsWith('/') && (match = kw.match(/^\/(.+)\/([a-zA-Z]*)$/))) {
-          try {
-            customAutoBlockRegexes.push(new RegExp(match[1], match[2]));
-          } catch (e) {}
-        } else {
-          plainAutoBlock.push(kw);
-        }
-      }
-
-      autoBlockRegexes = [];
-      if (plainAutoBlock.length > 0) {
-        const escaped = plainAutoBlock.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-        escaped.sort((a, b) => b.length - a.length);
-        const CHUNK_SIZE = 400;
-        for (let i = 0; i < escaped.length; i += CHUNK_SIZE) {
-          const chunk = escaped.slice(i, i + CHUNK_SIZE);
-          autoBlockRegexes.push(new RegExp(chunk.join('|'), 'i'));
-        }
-      }
-      if (customAutoBlockRegexes.length > 0) {
-        autoBlockRegexes.push(...customAutoBlockRegexes);
-      }
-    } else {
-      autoBlockRegexes = [];
-    }
+    blockRegexes = buildRegexes(blockKeywords);
+    autoBlockRegexes = buildRegexes(items.autoBlockKeywords || []);
   } catch (e) {
     console.error('[X-Blocker] mergeKeywords error:', e);
   }
@@ -233,7 +203,12 @@ chrome.storage.onChanged.addListener((changes, area) => {
     needsFilter = true;
   }
 
-  if (changes.cloudEnabled || changes.cloudKeywords || changes.keywords) {
+  if (
+    changes.cloudEnabled ||
+    changes.cloudKeywords ||
+    changes.keywords ||
+    changes.autoBlockKeywords
+  ) {
     mergeKeywords().then(() => {
       filterVersion++;
       scheduleFilter();
@@ -333,7 +308,8 @@ function detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage,
   if (userNode) {
     const handleLink = userNode.querySelector('a[href^="/"]');
     if (handleLink) {
-      stableHandle = (handleLink.getAttribute('href') || '').toLowerCase();
+      const rawHref = handleLink.getAttribute('href') || '';
+      stableHandle = extractCleanScreenName(rawHref);
       displayName = getTweetTextForKeywords(handleLink).replace(invisibleCharsRegex, '').trim();
     }
   }
@@ -342,6 +318,7 @@ function detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage,
     if (blockEmoji && textNode && hasEmoji(textNode)) {
       return {
         isSpam: true,
+        isAutoBlock: false,
         blockReason: '表情屏蔽',
         userName,
         stableHandle,
@@ -351,6 +328,7 @@ function detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage,
     if (blockSpecialChars && textNode && spamCharsRegex.test(textNode.textContent)) {
       return {
         isSpam: true,
+        isAutoBlock: false,
         blockReason: '特殊字符屏蔽',
         userName,
         stableHandle,
@@ -359,31 +337,25 @@ function detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage,
     }
   }
 
-  if (matchesBlocklist(tweetBody)) {
-    const isAutoBlock = matchesAutoBlocklist(tweetBody);
+  const cleanUserName = userName
+    ? userName.replace(/[\s_.-]+/g, '').replace(invisibleCharsRegex, '')
+    : '';
+
+  const bodyAuto = matchesAutoBlocklist(tweetBody);
+  const nameAuto = checkUsername && userName && matchesAutoBlocklist(cleanUserName);
+
+  const bodySpam = bodyAuto || matchesBlocklist(tweetBody);
+  const nameSpam = nameAuto || (checkUsername && userName && matchesBlocklist(cleanUserName));
+
+  if (bodySpam || nameSpam) {
     return {
       isSpam: true,
-      isAutoBlock,
-      blockReason: '内容屏蔽',
+      isAutoBlock: bodyAuto || nameAuto,
+      blockReason: bodySpam ? '内容屏蔽' : '昵称屏蔽',
       userName,
       stableHandle,
       displayName,
     };
-  }
-
-  if (checkUsername && userName) {
-    const cleanUserName = userName.replace(/[\s_.-]+/g, '').replace(invisibleCharsRegex, '');
-    if (matchesBlocklist(cleanUserName)) {
-      const isAutoBlock = matchesAutoBlocklist(cleanUserName);
-      return {
-        isSpam: true,
-        isAutoBlock,
-        blockReason: '昵称屏蔽',
-        userName,
-        stableHandle,
-        displayName,
-      };
-    }
   }
 
   return {
@@ -521,18 +493,8 @@ function filterTweets(specificTweets = null) {
           displayName: displayName || '',
           reason: blockReason,
           time: Date.now(),
+          isAutoBlock: isAutoBlock,
         });
-        
-        if (isAutoBlock) {
-          try {
-            chrome.runtime.sendMessage({ 
-              action: 'autoBlockUser', 
-              screenName: stableHandle || userName 
-            }).catch(() => {});
-          } catch {
-            // Ignore error if background script is not ready
-          }
-        }
       }
     } else {
       tweet.classList.remove('x-comment-blocker-hidden');
