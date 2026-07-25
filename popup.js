@@ -587,8 +587,17 @@ async function triggerCloudSync(manual = false) {
     const result = await chrome.runtime.sendMessage({ action: 'syncNow' });
     if (!result || !result.success) {
       if (manual) showStatus('同步失败，请检查网络');
-    } else if (manual) {
-      showStatus('云端词库已同步');
+    } else {
+      if (manual) showStatus('云端词库已同步');
+      // Reload state after successful sync
+      const items = await chrome.storage.local.get(['autoBlockKeywords']);
+      if (items.autoBlockKeywords) {
+        autoBlockKeywords = items.autoBlockKeywords;
+      }
+      if (cloudModal.classList.contains('open')) {
+        renderCloudKeywords();
+      }
+      renderUserKeywords();
     }
   } catch {
     if (manual) showStatus('同步失败，请检查网络');
