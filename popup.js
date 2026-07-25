@@ -979,12 +979,13 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.blockedHistory && historyModal.classList.contains('open')) {
     const newHistory = changes.blockedHistory.newValue || [];
     const oldHistory = changes.blockedHistory.oldValue || [];
-    const isNewItemAdded = 
-      newHistory.length > oldHistory.length || 
-      (newHistory.length > 0 && oldHistory.length > 0 && 
-       newHistory.length === oldHistory.length && 
-       newHistory[0].id !== oldHistory[0].id);
-      
+    const isNewItemAdded =
+      newHistory.length > oldHistory.length ||
+      (newHistory.length > 0 &&
+        oldHistory.length > 0 &&
+        newHistory.length === oldHistory.length &&
+        newHistory[0].id !== oldHistory[0].id);
+
     if (isNewItemAdded) {
       currentHistory = newHistory;
       refreshHistoryDisplay();
