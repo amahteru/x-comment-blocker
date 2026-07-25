@@ -111,6 +111,18 @@ class AutoBlockManager {
     this.initPromise = null;
   }
 
+  async checkDailyReset() {
+    const today = new Date().toDateString();
+    if (this.lastDate !== today) {
+      this.lastDate = today;
+      this.countToday = 0;
+      await this.saveState({
+        autoBlockLastDate: this.lastDate,
+        autoBlockToday: this.countToday,
+      });
+    }
+  }
+
   async init() {
     if (this.initialized) return;
     if (!this.initPromise) {
@@ -130,15 +142,7 @@ class AutoBlockManager {
         this.pausedUntil = items.autoBlockPausedUntil || 0;
         this.blockedUsersSet = new Set(items.blockedUsersOnX || []);
 
-        const today = new Date().toDateString();
-        if (this.lastDate !== today) {
-          this.lastDate = today;
-          this.countToday = 0;
-          await this.saveState({
-            autoBlockLastDate: this.lastDate,
-            autoBlockToday: this.countToday,
-          });
-        }
+        await this.checkDailyReset();
 
         this.initialized = true;
       })();
@@ -177,15 +181,7 @@ class AutoBlockManager {
       await this.init();
 
       while (true) {
-        const today = new Date().toDateString();
-        if (this.lastDate !== today) {
-          this.lastDate = today;
-          this.countToday = 0;
-          await this.saveState({
-            autoBlockLastDate: this.lastDate,
-            autoBlockToday: this.countToday,
-          });
-        }
+        await this.checkDailyReset();
 
         if (this.pausedUntil > Date.now()) {
           console.warn(
