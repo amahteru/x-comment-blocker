@@ -493,20 +493,8 @@ function filterTweets(specificTweets = null) {
           displayName: displayName || '',
           reason: blockReason,
           time: Date.now(),
+          isAutoBlock: isAutoBlock,
         });
-
-        if (isAutoBlock) {
-          try {
-            chrome.runtime
-              .sendMessage({
-                action: 'autoBlockUser',
-                screenName: stableHandle || userName,
-              })
-              .catch(() => {});
-          } catch {
-            // Ignore error if background script is not ready
-          }
-        }
       }
     } else {
       tweet.classList.remove('x-comment-blocker-hidden');
