@@ -257,7 +257,7 @@ var autoBlockManager = new AutoBlockManager();
 autoBlockManager.init().then(() => autoBlockManager.process());
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  void sender;
+  if (sender.id !== chrome.runtime.id) return false;
   if (message.action === 'syncNow') {
     doSync().then(sendResponse);
     return true;
