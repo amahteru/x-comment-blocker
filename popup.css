@@ -275,8 +275,8 @@ body {
 }
 
 .keyword-tag.is-autoblock {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.1);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--card));
+  background: color-mix(in srgb, var(--danger) 10%, var(--card));
 }
 
 .keyword-tag .tag-checkbox {

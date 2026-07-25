@@ -50,6 +50,10 @@ const toggleCloudSearchBtn = document.getElementById('toggleCloudSearchBtn');
 const cloudSearchContainer = document.getElementById('cloudSearchContainer');
 const cloudSearchInput = document.getElementById('cloudSearchInput');
 
+const editCloudAutoBlockBtn = document.getElementById('editCloudAutoBlockBtn');
+const saveCloudAutoBlockBtn = document.getElementById('saveCloudAutoBlockBtn');
+let isEditingCloudAutoBlock = false;
+
 let currentCloudSearchQuery = '';
 let cloudSearchDebounceTimer = null;
 
@@ -475,29 +479,52 @@ function renderCloudKeywords() {
         highlightText(textSpan, currentCloudSearchQuery);
 
         const isDisabled = disabledList.includes(kw);
-        const banBtn = el('button', {
-          className: 'tag-btn tag-btn-del',
-          innerHTML: ICON_BAN,
-          title: isDisabled ? '取消禁用' : '禁用',
-          onclick: () => {
-            if (isDisabled) {
-              disabledList = disabledList.filter((k) => k !== kw);
-            } else {
-              disabledList.push(kw);
+        const isAutoBlock = autoBlockKeywords.includes(kw);
+
+        let tagChildren = [];
+        if (isEditingCloudAutoBlock) {
+          const checkbox = el('input', {
+            type: 'checkbox',
+            className: 'tag-checkbox',
+            checked: isAutoBlock,
+            onchange: (e) => {
+              if (e.target.checked) {
+                if (!autoBlockKeywords.includes(kw)) autoBlockKeywords.push(kw);
+              } else {
+                autoBlockKeywords = autoBlockKeywords.filter((k) => k !== kw);
+              }
             }
-            chrome.storage.local.set({ disabledCloudKeywords: disabledList });
-            renderCloudKeywords();
-          },
-        });
+          });
+          tagChildren = [textSpan, checkbox];
+        } else {
+          const banBtn = el('button', {
+            className: 'tag-btn tag-btn-del',
+            innerHTML: ICON_BAN,
+            title: isDisabled ? '取消禁用' : '禁用',
+            onclick: () => {
+              if (isDisabled) {
+                disabledList = disabledList.filter(k => k !== kw);
+              } else {
+                disabledList.push(kw);
+              }
+              chrome.storage.local.set({ disabledCloudKeywords: disabledList });
+              renderCloudKeywords();
+            }
+          });
+          tagChildren = [textSpan, banBtn];
+        }
 
         const tag = el(
           'span',
           {
             className:
-              'keyword-tag' + (isRegex ? ' regex-tag' : '') + (isDisabled ? ' is-disabled' : ''),
+              'keyword-tag' + 
+              (isRegex ? ' regex-tag' : '') + 
+              (isDisabled ? ' is-disabled' : '') +
+              (isAutoBlock && !isEditingCloudAutoBlock ? ' is-autoblock' : ''),
             style: 'width: calc(50% - 5px);',
           },
-          [textSpan, banBtn],
+          tagChildren,
         );
         fragment.appendChild(tag);
       });
@@ -525,6 +552,24 @@ if (toggleCloudSearchBtn && cloudSearchContainer && cloudSearchInput) {
     currentCloudSearchQuery = e.target.value.toLowerCase();
     clearTimeout(cloudSearchDebounceTimer);
     cloudSearchDebounceTimer = setTimeout(() => renderCloudKeywords(), 200);
+  });
+}
+
+if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
+  editCloudAutoBlockBtn.addEventListener('click', () => {
+    isEditingCloudAutoBlock = true;
+    editCloudAutoBlockBtn.style.display = 'none';
+    saveCloudAutoBlockBtn.style.display = 'inline-flex';
+    renderCloudKeywords();
+  });
+
+  saveCloudAutoBlockBtn.addEventListener('click', () => {
+    isEditingCloudAutoBlock = false;
+    saveCloudAutoBlockBtn.style.display = 'none';
+    editCloudAutoBlockBtn.style.display = 'inline-flex';
+    autoSave();
+    renderCloudKeywords();
+    renderUserKeywords(); // update counts
   });
 }
 
@@ -605,14 +650,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       'cloudEnabled',
       'blockedCount',
       'lastSyncTime',
+      'cloudKeywords'
     ),
   );
 
   userKeywords = parseKeywords(items.keywords);
   autoBlockKeywords = items.autoBlockKeywords || [];
 
-  // Clean up autoBlockKeywords (remove words that are no longer in userKeywords)
-  autoBlockKeywords = autoBlockKeywords.filter((kw) => userKeywords.includes(kw));
+  // Clean up autoBlockKeywords (remove words that are no longer in either list)
+  const allValidKeywords = [...userKeywords, ...parseKeywords(items.cloudKeywords || '')];
+  autoBlockKeywords = autoBlockKeywords.filter((kw) => allValidKeywords.includes(kw));
+  
   checkUsernameEl.checked = items.checkUsername;
   onlyCommentsEl.checked = items.onlyComments;
   blockSpecialCharsEl.checked = items.blockSpecialChars;
