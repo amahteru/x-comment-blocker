@@ -98,7 +98,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 class AutoBlockManager {
   constructor() {
     this.isProcessing = false;
-    this.dailyLimit = 100;
+    this.dailyLimit = 150;
     this.minDelayMs = 5000;
     this.maxDelayMs = 10000;
 
