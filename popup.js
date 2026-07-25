@@ -493,7 +493,7 @@ function renderCloudKeywords() {
               } else {
                 autoBlockKeywords = autoBlockKeywords.filter((k) => k !== kw);
               }
-            }
+            },
           });
           tagChildren = [textSpan, checkbox];
         } else {
@@ -503,13 +503,13 @@ function renderCloudKeywords() {
             title: isDisabled ? '取消禁用' : '禁用',
             onclick: () => {
               if (isDisabled) {
-                disabledList = disabledList.filter(k => k !== kw);
+                disabledList = disabledList.filter((k) => k !== kw);
               } else {
                 disabledList.push(kw);
               }
               chrome.storage.local.set({ disabledCloudKeywords: disabledList });
               renderCloudKeywords();
-            }
+            },
           });
           tagChildren = [textSpan, banBtn];
         }
@@ -518,8 +518,8 @@ function renderCloudKeywords() {
           'span',
           {
             className:
-              'keyword-tag' + 
-              (isRegex ? ' regex-tag' : '') + 
+              'keyword-tag' +
+              (isRegex ? ' regex-tag' : '') +
               (isDisabled ? ' is-disabled' : '') +
               (isAutoBlock && !isEditingCloudAutoBlock ? ' is-autoblock' : ''),
             style: 'width: calc(50% - 5px);',
@@ -650,7 +650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'cloudEnabled',
       'blockedCount',
       'lastSyncTime',
-      'cloudKeywords'
+      'cloudKeywords',
     ),
   );
 
@@ -664,7 +664,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (originalAutoBlockLength !== autoBlockKeywords.length) {
     chrome.storage.local.set({ autoBlockKeywords });
   }
-  
+
   checkUsernameEl.checked = items.checkUsername;
   onlyCommentsEl.checked = items.onlyComments;
   blockSpecialCharsEl.checked = items.blockSpecialChars;
