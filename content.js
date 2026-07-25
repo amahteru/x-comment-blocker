@@ -76,9 +76,8 @@ async function mergeKeywords() {
       if (customRegexes.length > 0) {
         regexes.push(...customRegexes);
       }
-    } else {
+    } else 
       blockRegexes = [];
-    }
     
     const autoBlockKws = items.autoBlockKeywords || [];
     if (autoBlockKws.length > 0) {
