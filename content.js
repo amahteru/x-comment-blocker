@@ -40,8 +40,9 @@ async function mergeKeywords() {
     const cloudKws = items.cloudEnabled ? parseKeywords(items.cloudKeywords) : [];
 
     const blockKeywords = [...new Set([...cloudKws, ...userKws])];
+    const autoBlockKws = items.autoBlockKeywords || [];
 
-    const newKey = blockKeywords.join('\n');
+    const newKey = blockKeywords.join('\n') + '|AUTO:|' + autoBlockKws.join('\n');
     if (newKey === lastKeywordsKey) return;
     lastKeywordsKey = newKey;
 
@@ -80,7 +81,7 @@ async function mergeKeywords() {
     }
 
     blockRegexes = buildRegexes(blockKeywords);
-    autoBlockRegexes = buildRegexes(items.autoBlockKeywords || []);
+    autoBlockRegexes = buildRegexes(autoBlockKws);
   } catch (e) {
     console.error('[X-Blocker] mergeKeywords error:', e);
   }

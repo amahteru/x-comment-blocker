@@ -960,9 +960,32 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.blockedCount) {
     blockedCountEl.textContent = changes.blockedCount.newValue || 0;
   }
+  if (changes.blockedUsersOnX) {
+    currentBlockedUsersOnX = changes.blockedUsersOnX.newValue || [];
+    document.querySelectorAll('button.btn-block-x').forEach((btn) => {
+      const screenName = btn.dataset.screenName;
+      const isBlocked = currentBlockedUsersOnX.includes(screenName);
+      if (isBlocked) {
+        btn.textContent = '已拉黑';
+        btn.classList.add('success');
+        btn.title = '点击解除拉黑';
+      } else {
+        btn.textContent = '拉黑';
+        btn.classList.remove('success');
+        btn.title = '在 X 上拉黑该账号';
+      }
+    });
+  }
   if (changes.blockedHistory && historyModal.classList.contains('open')) {
     const newHistory = changes.blockedHistory.newValue || [];
-    if (newHistory.length > currentHistory.length) {
+    const oldHistory = changes.blockedHistory.oldValue || [];
+    const isNewItemAdded = 
+      newHistory.length > oldHistory.length || 
+      (newHistory.length > 0 && oldHistory.length > 0 && 
+       newHistory.length === oldHistory.length && 
+       newHistory[0].id !== oldHistory[0].id);
+      
+    if (isNewItemAdded) {
       currentHistory = newHistory;
       refreshHistoryDisplay();
     }
