@@ -44,6 +44,7 @@ const openCloudModalBtn = document.getElementById('openCloudModalBtn');
 const cloudModal = document.getElementById('cloudModal');
 const closeCloudBtn = document.getElementById('closeCloud');
 const cloudKeywordList = document.getElementById('cloudKeywordList');
+const cloudScrollContainer = document.getElementById('cloudScrollContainer');
 const cloudModalSubtitle = document.getElementById('cloudModalSubtitle');
 
 const toggleCloudSearchBtn = document.getElementById('toggleCloudSearchBtn');
@@ -530,6 +531,11 @@ function renderCloudKeywords() {
       });
 
       cloudKeywordList.appendChild(fragment);
+
+      const savedScroll = localStorage.getItem('cloudScrollTop');
+      if (!currentCloudSearchQuery && savedScroll) {
+        cloudScrollContainer.scrollTop = Number(savedScroll);
+      }
     });
 }
 
@@ -580,6 +586,16 @@ openCloudModalBtn.addEventListener('click', () => {
 
 closeCloudBtn.addEventListener('click', () => {
   cloudModal.classList.remove('open');
+});
+
+let cloudScrollDebounceTimer = null;
+cloudScrollContainer.addEventListener('scroll', () => {
+  clearTimeout(cloudScrollDebounceTimer);
+  if (currentCloudSearchQuery) return;
+  const currentScroll = cloudScrollContainer.scrollTop;
+  cloudScrollDebounceTimer = setTimeout(() => {
+    localStorage.setItem('cloudScrollTop', currentScroll);
+  }, 100);
 });
 
 async function triggerCloudSync(manual = false) {
