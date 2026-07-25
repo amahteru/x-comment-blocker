@@ -76,41 +76,11 @@ async function mergeKeywords() {
       if (customRegexes.length > 0) {
         regexes.push(...customRegexes);
       }
-    } else 
-      blockRegexes = [];
-    
-    const autoBlockKws = items.autoBlockKeywords || [];
-    if (autoBlockKws.length > 0) {
-      const plainAutoBlock = [];
-      const customAutoBlockRegexes = [];
-
-      for (const kw of autoBlockKws) {
-        let match;
-        if (kw.startsWith('/') && (match = kw.match(/^\/(.+)\/([a-zA-Z]*)$/))) {
-          try {
-            customAutoBlockRegexes.push(new RegExp(match[1], match[2]));
-          } catch (e) {}
-        } else {
-          plainAutoBlock.push(kw);
-        }
-      }
-
-      autoBlockRegexes = [];
-      if (plainAutoBlock.length > 0) {
-        const escaped = plainAutoBlock.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-        escaped.sort((a, b) => b.length - a.length);
-        const CHUNK_SIZE = 400;
-        for (let i = 0; i < escaped.length; i += CHUNK_SIZE) {
-          const chunk = escaped.slice(i, i + CHUNK_SIZE);
-          autoBlockRegexes.push(new RegExp(chunk.join('|'), 'i'));
-        }
-      }
-      if (customAutoBlockRegexes.length > 0) {
-        autoBlockRegexes.push(...customAutoBlockRegexes);
-      }
-    } else {
-      autoBlockRegexes = [];
+      return regexes;
     }
+
+    blockRegexes = buildRegexes(blockKeywords);
+    autoBlockRegexes = buildRegexes(items.autoBlockKeywords || []);
   } catch (e) {
     console.error('[X-Blocker] mergeKeywords error:', e);
   }
@@ -524,13 +494,15 @@ function filterTweets(specificTweets = null) {
           reason: blockReason,
           time: Date.now(),
         });
-        
+
         if (isAutoBlock) {
           try {
-            chrome.runtime.sendMessage({ 
-              action: 'autoBlockUser', 
-              screenName: stableHandle || userName 
-            }).catch(() => {});
+            chrome.runtime
+              .sendMessage({
+                action: 'autoBlockUser',
+                screenName: stableHandle || userName,
+              })
+              .catch(() => {});
           } catch {
             // Ignore error if background script is not ready
           }
