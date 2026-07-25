@@ -76,11 +76,42 @@ async function mergeKeywords() {
       if (customRegexes.length > 0) {
         regexes.push(...customRegexes);
       }
-      return regexes;
+    } else {
+      blockRegexes = [];
     }
+    
+    const autoBlockKws = items.autoBlockKeywords || [];
+    if (autoBlockKws.length > 0) {
+      const plainAutoBlock = [];
+      const customAutoBlockRegexes = [];
 
-    blockRegexes = buildRegexes(blockKeywords);
-    autoBlockRegexes = buildRegexes(items.autoBlockKeywords || []);
+      for (const kw of autoBlockKws) {
+        let match;
+        if (kw.startsWith('/') && (match = kw.match(/^\/(.+)\/([a-zA-Z]*)$/))) {
+          try {
+            customAutoBlockRegexes.push(new RegExp(match[1], match[2]));
+          } catch (e) {}
+        } else {
+          plainAutoBlock.push(kw);
+        }
+      }
+
+      autoBlockRegexes = [];
+      if (plainAutoBlock.length > 0) {
+        const escaped = plainAutoBlock.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        escaped.sort((a, b) => b.length - a.length);
+        const CHUNK_SIZE = 400;
+        for (let i = 0; i < escaped.length; i += CHUNK_SIZE) {
+          const chunk = escaped.slice(i, i + CHUNK_SIZE);
+          autoBlockRegexes.push(new RegExp(chunk.join('|'), 'i'));
+        }
+      }
+      if (customAutoBlockRegexes.length > 0) {
+        autoBlockRegexes.push(...customAutoBlockRegexes);
+      }
+    } else {
+      autoBlockRegexes = [];
+    }
   } catch (e) {
     console.error('[X-Blocker] mergeKeywords error:', e);
   }
@@ -493,8 +524,18 @@ function filterTweets(specificTweets = null) {
           displayName: displayName || '',
           reason: blockReason,
           time: Date.now(),
-          isAutoBlock: isAutoBlock,
         });
+        
+        if (isAutoBlock) {
+          try {
+            chrome.runtime.sendMessage({ 
+              action: 'autoBlockUser', 
+              screenName: stableHandle || userName 
+            }).catch(() => {});
+          } catch {
+            // Ignore error if background script is not ready
+          }
+        }
       }
     } else {
       tweet.classList.remove('x-comment-blocker-hidden');
