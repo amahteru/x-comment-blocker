@@ -443,14 +443,17 @@ function renderCloudKeywords() {
       let disabledList = items.disabledCloudKeywords || [];
 
       if (currentCloudSearchQuery !== '') {
-        cloudList = cloudList.filter(kw => kw.toLowerCase().includes(currentCloudSearchQuery));
+        cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
       }
 
       cloudKeywordList.innerHTML = '';
 
       if (cloudList.length === 0) {
         cloudKeywordList.appendChild(
-          el('div', { className: 'empty-hint', textContent: currentCloudSearchQuery ? '没有找到匹配的屏蔽词' : '暂无云端屏蔽词' }),
+          el('div', {
+            className: 'empty-hint',
+            textContent: currentCloudSearchQuery ? '没有找到匹配的屏蔽词' : '暂无云端屏蔽词',
+          }),
         );
         if (currentCloudSearchQuery) {
           cloudModalSubtitle.textContent = `(搜索到 ${cloudList.length} 个词)`;
@@ -460,13 +463,15 @@ function renderCloudKeywords() {
         return;
       }
 
-      cloudModalSubtitle.textContent = currentCloudSearchQuery ? `(搜索到 ${cloudList.length} 个词)` : `(共 ${cloudList.length} 个词)`;
+      cloudModalSubtitle.textContent = currentCloudSearchQuery
+        ? `(搜索到 ${cloudList.length} 个词)`
+        : `(共 ${cloudList.length} 个词)`;
       const fragment = document.createDocumentFragment();
 
       cloudList.forEach((kw) => {
         const isRegex = isKeywordRegex(kw);
         const textSpan = el('span', { className: 'tag-text', textContent: kw, title: kw });
-        
+
         highlightText(textSpan, currentCloudSearchQuery);
 
         const isDisabled = disabledList.includes(kw);
@@ -476,22 +481,23 @@ function renderCloudKeywords() {
           title: isDisabled ? '取消禁用' : '禁用',
           onclick: () => {
             if (isDisabled) {
-              disabledList = disabledList.filter(k => k !== kw);
+              disabledList = disabledList.filter((k) => k !== kw);
             } else {
               disabledList.push(kw);
             }
             chrome.storage.local.set({ disabledCloudKeywords: disabledList });
             renderCloudKeywords();
-          }
+          },
         });
 
         const tag = el(
           'span',
           {
-            className: 'keyword-tag' + (isRegex ? ' regex-tag' : '') + (isDisabled ? ' is-disabled' : ''),
-            style: 'width: calc(50% - 5px);'
+            className:
+              'keyword-tag' + (isRegex ? ' regex-tag' : '') + (isDisabled ? ' is-disabled' : ''),
+            style: 'width: calc(50% - 5px);',
           },
-          [textSpan, banBtn]
+          [textSpan, banBtn],
         );
         fragment.appendChild(tag);
       });
