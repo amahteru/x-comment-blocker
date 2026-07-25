@@ -788,9 +788,19 @@ function updateFilterOptions() {
   const reasonsSet = new Set();
   currentHistory.forEach((item) => {
     if (item.reason) reasonsSet.add(item.reason);
+    if (currentBlockedUsersOnX.includes(extractCleanScreenName(item.user))) {
+      reasonsSet.add('__blocked_on_x__');
+    }
   });
 
   const reasons = Array.from(reasonsSet);
+  // Sort so that '__blocked_on_x__' is always at a predictable position if desired, or just leave it at the end
+  // Sort alphabetically but put __blocked_on_x__ at the top
+  reasons.sort((a, b) => {
+    if (a === '__blocked_on_x__') return -1;
+    if (b === '__blocked_on_x__') return 1;
+    return a.localeCompare(b);
+  });
 
   if (currentFilterReason !== 'all' && !reasons.includes(currentFilterReason)) {
     currentFilterReason = 'all';
@@ -808,7 +818,7 @@ function updateFilterOptions() {
     const opt = document.createElement('div');
     opt.className = `filter-option ${currentFilterReason === reason ? 'active' : ''}`;
     opt.dataset.reason = reason;
-    opt.textContent = reason;
+    opt.textContent = reason === '__blocked_on_x__' ? '已拉黑' : reason;
     filterDropdown.appendChild(opt);
   });
 }
@@ -843,7 +853,14 @@ function applyHistoryFilter() {
   let filtered = currentHistory;
 
   if (currentFilterReason !== 'all') {
-    filtered = filtered.filter((item) => item.reason === currentFilterReason);
+    if (currentFilterReason === '__blocked_on_x__') {
+      filtered = filtered.filter((item) => {
+        const screenName = extractCleanScreenName(item.user);
+        return currentBlockedUsersOnX.includes(screenName);
+      });
+    } else {
+      filtered = filtered.filter((item) => item.reason === currentFilterReason);
+    }
   }
 
   if (currentSearchQuery !== '') {
