@@ -40,6 +40,15 @@ const historyModal = document.getElementById('historyModal');
 const closeHistoryBtn = document.getElementById('closeHistory');
 const historyList = document.getElementById('historyList');
 
+let whitelist = [];
+const openWhitelistBtn = document.getElementById('openWhitelistBtn');
+const whitelistModal = document.getElementById('whitelistModal');
+const closeWhitelistBtn = document.getElementById('closeWhitelist');
+const whitelistCount = document.getElementById('whitelistCount');
+const newWhitelistUser = document.getElementById('newWhitelistUser');
+const addWhitelistBtn = document.getElementById('addWhitelistBtn');
+const whitelistList = document.getElementById('whitelistList');
+
 const openCloudModalBtn = document.getElementById('openCloudModalBtn');
 const cloudModal = document.getElementById('cloudModal');
 const closeCloudBtn = document.getElementById('closeCloud');
@@ -676,8 +685,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       'blockedCount',
       'lastSyncTime',
       'cloudKeywords',
+      'whitelist'
     ),
   );
+
+  whitelist = items.whitelist || [];
 
   userKeywords = parseKeywords(items.keywords);
   autoBlockKeywords = items.autoBlockKeywords || [];
@@ -1161,6 +1173,144 @@ closeHistoryBtn.addEventListener('click', () => {
     historySearchContainer.classList.remove('open');
     historySearchInput.value = '';
     currentSearchQuery = '';
+  }
+});
+
+function renderWhitelist() {
+  whitelistList.innerHTML = '';
+  if (whitelist.length === 0) {
+    whitelistList.innerHTML = '<div class="empty-hint">暂无白名单用户</div>';
+    whitelistCount.textContent = '(0)';
+    return;
+  }
+  
+  whitelistCount.textContent = `(${whitelist.length})`;
+  
+  whitelist.forEach((handle) => {
+    const itemEl = document.createElement('span');
+    itemEl.className = 'keyword-tag';
+    
+    const textSpan = document.createElement('span');
+    textSpan.className = 'tag-text';
+    textSpan.textContent = `@${handle}`;
+    
+    const editBtn = document.createElement('button');
+    editBtn.className = 'tag-btn tag-btn-edit';
+    editBtn.title = '编辑';
+    editBtn.innerHTML = ICON_EDIT;
+    editBtn.onclick = () => startEditWhitelist(itemEl, handle);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'tag-btn tag-btn-del';
+    delBtn.title = '删除';
+    delBtn.innerHTML = ICON_DEL;
+    delBtn.onclick = () => {
+      whitelist = whitelist.filter(h => h !== handle);
+      chrome.storage.local.set({ whitelist }, () => {
+        renderWhitelist();
+      });
+    };
+    
+    itemEl.appendChild(textSpan);
+    itemEl.appendChild(editBtn);
+    itemEl.appendChild(delBtn);
+    whitelistList.appendChild(itemEl);
+  });
+}
+
+function startEditWhitelist(tagEl, oldHandle) {
+  tagEl.innerHTML = '';
+  tagEl.classList.add('is-editing');
+
+  const input = document.createElement('input');
+  input.className = 'tag-edit-input';
+  input.value = oldHandle;
+  
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      confirmEditWhitelist(input, oldHandle);
+    } else if (e.key === 'Escape') {
+      renderWhitelist();
+    }
+  });
+
+  const confirmBtn = document.createElement('button');
+  confirmBtn.className = 'tag-btn tag-btn-save';
+  confirmBtn.innerHTML = ICON_CHECK;
+  confirmBtn.title = '确认';
+  confirmBtn.onclick = () => confirmEditWhitelist(input, oldHandle);
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'tag-btn tag-btn-del';
+  cancelBtn.innerHTML = ICON_DEL;
+  cancelBtn.title = '取消';
+  cancelBtn.onclick = () => renderWhitelist();
+
+  tagEl.appendChild(input);
+  tagEl.appendChild(confirmBtn);
+  tagEl.appendChild(cancelBtn);
+
+  input.focus();
+  input.select();
+}
+
+function confirmEditWhitelist(inputEl, oldHandle) {
+  const newVal = extractCleanScreenName(inputEl.value);
+  if (!newVal) {
+    showStatus('请输入有效的用户名');
+    return;
+  }
+  
+  const existingIndex = whitelist.indexOf(newVal);
+  const oldIndex = whitelist.indexOf(oldHandle);
+  
+  if (existingIndex === -1 || existingIndex === oldIndex) {
+    if (whitelist[oldIndex] !== newVal) {
+      whitelist[oldIndex] = newVal;
+      chrome.storage.local.set({ whitelist }, () => {
+        renderWhitelist();
+      });
+    } else {
+      renderWhitelist();
+    }
+  } else {
+    showStatus('该用户已在白名单中');
+    renderWhitelist();
+  }
+}
+
+openWhitelistBtn.addEventListener('click', async () => {
+  const items = await chrome.storage.local.get(getStorageDefaults('whitelist'));
+  whitelist = items.whitelist || [];
+  renderWhitelist();
+  whitelistModal.classList.add('open');
+});
+
+closeWhitelistBtn.addEventListener('click', () => {
+  whitelistModal.classList.remove('open');
+});
+
+addWhitelistBtn.addEventListener('click', () => {
+  const val = newWhitelistUser.value;
+  const handle = extractCleanScreenName(val);
+  if (!handle) {
+    showStatus('请输入有效的用户名');
+    return;
+  }
+  if (!whitelist.includes(handle)) {
+    whitelist.unshift(handle);
+    chrome.storage.local.set({ whitelist }, () => {
+      renderWhitelist();
+      newWhitelistUser.value = '';
+    });
+  } else {
+    showStatus('该用户已在白名单中');
+  }
+});
+
+newWhitelistUser.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    addWhitelistBtn.click();
   }
 });
 

@@ -9,6 +9,7 @@ let blockEmoji = false;
 let filterEnabled = true;
 let filterTimer = null;
 let filterVersion = 0;
+let whitelistSet = new Set();
 let observerFlushScheduled = false;
 const localSentIds = new Set();
 const tweetStateMap = new WeakMap();
@@ -107,6 +108,7 @@ async function mergeKeywords() {
         'blockSpecialChars',
         'blockEmoji',
         'enabled',
+        'whitelist'
       ),
     );
 
@@ -115,6 +117,7 @@ async function mergeKeywords() {
     blockSpecialChars = items.blockSpecialChars;
     blockEmoji = items.blockEmoji;
     filterEnabled = items.enabled;
+    whitelistSet = new Set(items.whitelist || []);
 
     await mergeKeywords();
     filterTweets();
@@ -212,6 +215,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (changes.blockSpecialChars) {
     blockSpecialChars = changes.blockSpecialChars.newValue;
+    needsFilter = true;
+  }
+  if (changes.whitelist) {
+    whitelistSet = new Set(changes.whitelist.newValue || []);
     needsFilter = true;
   }
 
@@ -325,6 +332,10 @@ function detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage,
       stableHandle = extractCleanScreenName(rawHref);
       displayName = getTweetTextForKeywords(handleLink).replace(invisibleCharsRegex, '').trim();
     }
+  }
+
+  if (stableHandle && whitelistSet.has(stableHandle)) {
+    return { isSpam: false };
   }
 
   if (isStatusPage && !isMainTweet) {

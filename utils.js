@@ -39,6 +39,7 @@ const STORAGE_DEFAULTS = {
   autoBlockToday: 0,
   autoBlockLastDate: '',
   autoBlockPausedUntil: 0,
+  whitelist: [],
 };
 
 function getStorageDefaults(...keys) {

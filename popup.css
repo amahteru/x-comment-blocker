@@ -434,6 +434,7 @@ body {
   font-weight: 500;
   opacity: 0;
   transition: opacity 0.3s;
+  z-index: 1000;
 }
 
 #status.visible {
