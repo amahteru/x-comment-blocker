@@ -341,17 +341,44 @@ function detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage,
     ? userName.replace(/[\s_.-]+/g, '').replace(invisibleCharsRegex, '')
     : '';
 
-  const bodyAuto = matchesAutoBlocklist(tweetBody);
-  const nameAuto = checkUsername && userName && matchesAutoBlocklist(cleanUserName);
-
-  const bodySpam = bodyAuto || matchesBlocklist(tweetBody);
-  const nameSpam = nameAuto || (checkUsername && userName && matchesBlocklist(cleanUserName));
-
-  if (bodySpam || nameSpam) {
+  if (matchesAutoBlocklist(tweetBody)) {
     return {
       isSpam: true,
-      isAutoBlock: bodyAuto || nameAuto,
-      blockReason: bodySpam ? '内容屏蔽' : '昵称屏蔽',
+      isAutoBlock: true,
+      blockReason: '内容屏蔽',
+      userName,
+      stableHandle,
+      displayName,
+    };
+  }
+
+  if (checkUsername && userName && matchesAutoBlocklist(cleanUserName)) {
+    return {
+      isSpam: true,
+      isAutoBlock: true,
+      blockReason: '昵称屏蔽',
+      userName,
+      stableHandle,
+      displayName,
+    };
+  }
+
+  if (matchesBlocklist(tweetBody)) {
+    return {
+      isSpam: true,
+      isAutoBlock: false,
+      blockReason: '内容屏蔽',
+      userName,
+      stableHandle,
+      displayName,
+    };
+  }
+
+  if (checkUsername && userName && matchesBlocklist(cleanUserName)) {
+    return {
+      isSpam: true,
+      isAutoBlock: false,
+      blockReason: '昵称屏蔽',
       userName,
       stableHandle,
       displayName,
