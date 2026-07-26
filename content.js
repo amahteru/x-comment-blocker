@@ -249,10 +249,7 @@
   function getTweetTextForKeywords(node) {
     if (!node) return '';
     let text = '';
-    const walker = document.createTreeWalker(
-      node,
-      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
-    );
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
     let currentNode = walker.currentNode;
     while (currentNode) {
       if (currentNode.nodeType === Node.TEXT_NODE) {
