@@ -1,4 +1,10 @@
-import { syncCloudKeywords, SYNC_INTERVAL_MINUTES, getStorageDefaults, extractCleanScreenName, parseKeywords } from './utils.js';
+import {
+  extractCleanScreenName,
+  getStorageDefaults,
+  parseKeywords,
+  SYNC_INTERVAL_MINUTES,
+  syncCloudKeywords,
+} from './utils.js';
 
 const ALARM_NAME = 'cloudKeywordSync';
 let isSyncing = false;
