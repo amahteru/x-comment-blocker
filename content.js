@@ -1,4 +1,5 @@
-/* global getStorageDefaults, parseKeywords, invisibleCharsRegex */
+(async () => {
+const { getStorageDefaults, parseKeywords, invisibleCharsRegex, extractCleanScreenName } = await import(chrome.runtime.getURL('utils.js'));
 let blockRegexes = [];
 let autoBlockRegexes = [];
 let lastKeywordsKey = '';
@@ -447,16 +448,7 @@ function filterTweets(specificTweets = null) {
     const rawTweetText = textNode ? getTweetTextForKeywords(textNode) : '';
     const rawUserName = userNode ? getTweetTextForKeywords(userNode) : '';
 
-    const quickHash =
-      rawTweetText +
-      '|' +
-      rawUserName +
-      '|' +
-      filterVersion +
-      '|' +
-      isStatusPage +
-      '|' +
-      (logicalPageStatusId || '');
+    const quickHash = `${rawTweetText}|${rawUserName}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}`;
     if (state.quickHash === quickHash) {
       if (state.isSpam) {
         if (!tweet.classList.contains('x-comment-blocker-hidden')) {
@@ -564,3 +556,4 @@ function scheduleFilter() {
   if (filterTimer) cancelAnimationFrame(filterTimer);
   filterTimer = requestAnimationFrame(() => filterTweets());
 }
+})();

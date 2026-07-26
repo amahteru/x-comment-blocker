@@ -11,7 +11,8 @@
   "permissions": ["storage", "alarms", "contextMenus", "cookies"],
   "host_permissions": ["https://api.github.com/*", "*://*.twitter.com/*", "*://*.x.com/*"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "action": {
     "default_popup": "popup.html",
@@ -25,7 +26,13 @@
     {
       "matches": ["*://*.twitter.com/*", "*://*.x.com/*"],
       "css": ["content.css"],
-      "js": ["utils.js", "content.js"]
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["utils.js"],
+      "matches": ["*://*.twitter.com/*", "*://*.x.com/*"]
     }
   ]
 }

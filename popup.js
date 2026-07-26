@@ -1,4 +1,4 @@
-/* global parseKeywords, getStorageDefaults, SYNC_INTERVAL_MS */
+import { parseKeywords, getStorageDefaults, SYNC_INTERVAL_MS, invisibleCharsRegex, extractCleanScreenName } from './utils.js';
 let userKeywords = [];
 let autoBlockKeywords = [];
 let isLoading = true;
