@@ -140,10 +140,10 @@ addBtn.addEventListener('click', () => {
       newKeywordInput.focus();
       return;
     }
-    const kws = rawValue
-      .split('\n')
-      .map((k) => k.replace(invisibleCharsRegex, '').trim())
-      .filter((k) => k);
+    const kws = Iterator.from(rawValue.split('\n'))
+      .map((k) => k.replaceAll(invisibleCharsRegex, '').trim())
+      .filter((k) => k)
+      .toArray();
 
     let addedCount = 0;
     for (const rawKw of kws) {
@@ -358,7 +358,7 @@ importFile.addEventListener('change', async (e) => {
     try {
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed)) {
-        newKeywords = parseKeywords(parsed.map((k) => String(k)).join('\n'));
+        newKeywords = parseKeywords(Iterator.from(parsed).map((k) => String(k)).toArray().join('\n'));
       }
     } catch {
       newKeywords = parseKeywords(content);
@@ -385,36 +385,31 @@ importFile.addEventListener('change', async (e) => {
 });
 
 function formatHistoryTime(timestamp) {
-  const date = new Date(timestamp);
-  const now = new Date();
+  const date = Temporal.Instant.fromEpochMilliseconds(timestamp).toZonedDateTimeISO('Asia/Shanghai');
+  const now = Temporal.Now.zonedDateTimeISO('Asia/Shanghai');
 
-  const isToday =
-    date.getDate() === now.getDate() &&
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear();
-
-  const isThisYear = date.getFullYear() === now.getFullYear();
-
-  if (isToday) {
+  if (date.toPlainDate().equals(now.toPlainDate())) {
     return new Intl.DateTimeFormat('zh-CN', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
-    }).format(date);
-  } else if (isThisYear) {
-    return `${date.getMonth() + 1}月${date.getDate()}日`;
+    }).format(timestamp);
+  } else if (date.year === now.year) {
+    return `${date.month}月${date.day}日`;
   } else {
-    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    return `${date.year}年${date.month}月${date.day}日`;
   }
 }
 
+const rtf = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'always' });
+
 function relativeTime(ts) {
   if (!ts) return '';
-  const diff = Math.floor((Date.now() - ts) / 1000);
-  if (diff < 60) return '刚刚同步';
-  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前同步`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前同步`;
-  return `${Math.floor(diff / 86400)}天前同步`;
+  const diffSec = Math.floor((ts - Date.now()) / 1000);
+  if (diffSec > -60) return '刚刚同步';
+  if (diffSec > -3600) return rtf.format(Math.ceil(diffSec / 60), 'minute') + '同步';
+  if (diffSec > -86400) return rtf.format(Math.ceil(diffSec / 3600), 'hour') + '同步';
+  return rtf.format(Math.ceil(diffSec / 86400), 'day') + '同步';
 }
 
 async function updateCloudInfo() {

@@ -6,7 +6,7 @@ export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
 
 export function extractCleanScreenName(input) {
   if (!input) return '';
-  const cleaned = input.replace(invisibleCharsRegex, '').trim();
+  const cleaned = input.replaceAll(invisibleCharsRegex, '').trim();
   const match = cleaned.match(/(?:^|\/|@)(?<handle>[a-zA-Z0-9_]{1,15})(?:\/|\?|$)/);
   if (match) return match.groups.handle.toLowerCase();
   return cleaned
@@ -52,7 +52,7 @@ export function getStorageDefaults(...keys) {
 export function parseKeywords(text) {
   if (!text) return [];
   return text.split('\n').flatMap((k) => {
-    const trimmed = k.replace(invisibleCharsRegex, '').trim();
+    const trimmed = k.replaceAll(invisibleCharsRegex, '').trim();
     if (!trimmed) return [];
     if (trimmed.length >= 3 && trimmed.startsWith('/') && /\/[a-zA-Z]*$/.test(trimmed)) {
       return [trimmed];

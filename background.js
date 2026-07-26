@@ -368,13 +368,13 @@ function handleRecordSpam(items) {
       getStorageDefaults('blockedCount', 'blockedHistory'),
     );
 
-    const autoBlockScreenNames = newSpams.filter((s) => s.isAutoBlock).map((s) => s.user);
+    const autoBlockScreenNames = Iterator.from(newSpams).filter((s) => s.isAutoBlock).map((s) => s.user).toArray();
     if (autoBlockScreenNames.length > 0) {
       autoBlockManager.enqueueBatch(autoBlockScreenNames);
     }
 
     const history = storageItems.blockedHistory ?? [];
-    const historyIds = new Set(history.map((h) => h.id));
+    const historyIds = new Set(Iterator.from(history).map((h) => h.id));
     const uniqueSpams = newSpams.filter((s) => !historyIds.has(s.id));
 
     if (uniqueSpams.length === 0) return;

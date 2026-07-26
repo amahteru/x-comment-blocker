@@ -327,7 +327,7 @@
   }
 
   function detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage, isMainTweet) {
-    const tweetBody = rawTweetText.replace(invisibleCharsRegex, '');
+    const tweetBody = rawTweetText.replaceAll(invisibleCharsRegex, '');
     const userName = rawUserName;
     let stableHandle = '';
     let displayName = '';
@@ -336,7 +336,7 @@
     if (handleLink) {
       const rawHref = handleLink.getAttribute('href') || '';
       stableHandle = extractCleanScreenName(rawHref);
-      displayName = getTweetTextForKeywords(handleLink).replace(invisibleCharsRegex, '').trim();
+      displayName = getTweetTextForKeywords(handleLink).replaceAll(invisibleCharsRegex, '').trim();
     }
 
     if (stableHandle && whitelistSet.has(stableHandle)) {
@@ -367,7 +367,7 @@
     }
 
     const cleanUserName = userName
-      ? userName.replace(/[\s_.-]+/g, '').replace(invisibleCharsRegex, '')
+      ? userName.replaceAll(/[\s_.-]+/g, '').replaceAll(invisibleCharsRegex, '')
       : '';
 
     if (matchesAutoBlocklist(tweetBody)) {
@@ -511,8 +511,8 @@
           tweet.classList.add('x-comment-blocker-hidden');
         }
         const normalizedBody = rawTweetText
-          .replace(invisibleCharsRegex, '')
-          .replace(/\s+/g, ' ')
+          .replaceAll(invisibleCharsRegex, '')
+          .replaceAll(/\s+/g, ' ')
           .trim();
 
         const uniqueId = tweetId ?? `${normalizedBody}|${stableHandle}`;
