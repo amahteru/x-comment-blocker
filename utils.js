@@ -123,9 +123,10 @@ async function syncCloudKeywords() {
     const autoBlockKeywords = storageItems.autoBlockKeywords || [];
     const userKws = parseKeywords(storageItems.keywords);
 
-    const cleanedDisabled = disabledCloudKeywords.filter((kw) => cloudList.includes(kw));
-    const allValidKeywords = [...userKws, ...cloudList];
-    const cleanedAutoBlock = autoBlockKeywords.filter((kw) => allValidKeywords.includes(kw));
+    const cloudListSet = new Set(cloudList);
+    const cleanedDisabled = Array.from(new Set(disabledCloudKeywords).intersection(cloudListSet));
+    const allValidKeywordsSet = new Set(userKws).union(cloudListSet);
+    const cleanedAutoBlock = Array.from(new Set(autoBlockKeywords).intersection(allValidKeywordsSet));
 
     await chrome.storage.local.set({
       cloudKeywords: cloudList.join('\n'),

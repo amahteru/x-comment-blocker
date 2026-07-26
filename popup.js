@@ -309,7 +309,7 @@ function addKeyword() {
   const inputKws = parseKeywords(newKeywordInput.value);
   if (inputKws.length === 0) return;
 
-  const newKws = inputKws.filter((kw) => !userKeywords.includes(kw));
+  const newKws = Array.from(new Set(inputKws).difference(new Set(userKeywords)));
 
   newKeywordInput.value = '';
   newKeywordInput.focus();
@@ -693,9 +693,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   autoBlockKeywords = items.autoBlockKeywords || [];
 
   // Clean up autoBlockKeywords (remove words that are no longer in either list)
-  const allValidKeywords = [...userKeywords, ...parseKeywords(items.cloudKeywords || '')];
+  const allValidKeywordsSet = new Set(userKeywords).union(new Set(parseKeywords(items.cloudKeywords || '')));
   const originalAutoBlockLength = autoBlockKeywords.length;
-  autoBlockKeywords = autoBlockKeywords.filter((kw) => allValidKeywords.includes(kw));
+  autoBlockKeywords = Array.from(new Set(autoBlockKeywords).intersection(allValidKeywordsSet));
   if (originalAutoBlockLength !== autoBlockKeywords.length) {
     await chrome.storage.local.set({ autoBlockKeywords });
   }

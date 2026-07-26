@@ -49,10 +49,10 @@ async function mergeKeywords() {
       ? parseKeywords(items.cloudKeywords).filter((kw) => !disabledCloudKws.includes(kw))
       : [];
 
-    const blockKeywords = Array.from(new Set(cloudKws).union(new Set(userKws)));
+    const blockKeywordsSet = new Set(cloudKws).union(new Set(userKws));
+    const blockKeywords = Array.from(blockKeywordsSet);
     const rawAutoBlockKws = items.autoBlockKeywords || [];
-    const activeBlockSet = new Set(blockKeywords);
-    const autoBlockKws = rawAutoBlockKws.filter((kw) => activeBlockSet.has(kw));
+    const autoBlockKws = Array.from(new Set(rawAutoBlockKws).intersection(blockKeywordsSet));
 
     const newKey = `${blockKeywords.join('\n')}|AUTO:|${autoBlockKws.join('\n')}`;
     if (newKey === lastKeywordsKey) return;
