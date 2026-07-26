@@ -313,7 +313,7 @@ function resolveStatusPage(tweet, pageContext) {
   if (pageContext.isPhotoVideoOverlay) {
     if (tweet.closest('[role="dialog"]') !== null) return true;
     const state = tweetStateMap.get(tweet);
-    if (state && state.isStatusPage !== undefined) return state.isStatusPage;
+    if (state?.isStatusPage !== undefined) return state.isStatusPage;
     return false;
   }
   return !!pageContext.pageStatusId;
@@ -325,13 +325,11 @@ function detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage,
   let stableHandle = '';
   let displayName = '';
 
-  if (userNode) {
-    const handleLink = userNode.querySelector('a[href^="/"]');
-    if (handleLink) {
-      const rawHref = handleLink.getAttribute('href') || '';
-      stableHandle = extractCleanScreenName(rawHref);
-      displayName = getTweetTextForKeywords(handleLink).replace(invisibleCharsRegex, '').trim();
-    }
+  const handleLink = userNode?.querySelector('a[href^="/"]');
+  if (handleLink) {
+    const rawHref = handleLink.getAttribute('href') || '';
+    stableHandle = extractCleanScreenName(rawHref);
+    displayName = getTweetTextForKeywords(handleLink).replace(invisibleCharsRegex, '').trim();
   }
 
   if (stableHandle && whitelistSet.has(stableHandle)) {
