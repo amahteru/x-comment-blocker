@@ -193,7 +193,10 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
         const kwToRemove = kw;
         setTimeout(() => {
           const idx = userKeywords.indexOf(kwToRemove);
-          if (idx !== -1) userKeywords = userKeywords.toSpliced(idx, 1);
+          if (idx !== -1) {
+            userKeywords = userKeywords.toSpliced(idx, 1);
+            autoBlockKeywords.delete(kwToRemove);
+          }
           renderUserKeywords();
           autoSave();
         }, 200);
@@ -288,7 +291,12 @@ function confirmEdit(inputEl, index) {
     const existingIndex = userKeywords.indexOf(newVal);
     if (existingIndex === -1 || existingIndex === index) {
       if (userKeywords[index] !== newVal) {
+        const oldVal = userKeywords[index];
         userKeywords[index] = newVal;
+        if (autoBlockKeywords.has(oldVal)) {
+          autoBlockKeywords.delete(oldVal);
+          autoBlockKeywords.add(newVal);
+        }
         changed = true;
       }
     } else {
