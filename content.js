@@ -45,7 +45,7 @@ async function mergeKeywords() {
     );
 
     const userKws = parseKeywords(items.keywords);
-    const disabledCloudKws = items.disabledCloudKeywords || [];
+    const disabledCloudKws = items.disabledCloudKeywords ?? [];
     const cloudKws = items.cloudEnabled
       ? new Set(parseKeywords(items.cloudKeywords))
           .difference(new Set(disabledCloudKws))
@@ -55,7 +55,7 @@ async function mergeKeywords() {
 
     const blockKeywordsSet = new Set(Iterator.concat(cloudKws, userKws));
     const blockKeywords = blockKeywordsSet.values().toArray();
-    const rawAutoBlockKws = items.autoBlockKeywords || [];
+    const rawAutoBlockKws = items.autoBlockKeywords ?? [];
     const autoBlockKws = new Set(rawAutoBlockKws).intersection(blockKeywordsSet).values().toArray();
 
     const newKey = `${blockKeywords.join('\n')}|AUTO:|${autoBlockKws.join('\n')}`;
@@ -121,7 +121,7 @@ async function mergeKeywords() {
     blockSpecialChars = items.blockSpecialChars;
     blockEmoji = items.blockEmoji;
     filterEnabled = items.enabled;
-    whitelistSet = new Set(items.whitelist || []);
+    whitelistSet = new Set(items.whitelist ?? []);
 
     await mergeKeywords();
     filterTweets();
@@ -222,7 +222,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     needsFilter = true;
   }
   if (changes.whitelist) {
-    whitelistSet = new Set(changes.whitelist.newValue || []);
+    whitelistSet = new Set(changes.whitelist.newValue ?? []);
     needsFilter = true;
   }
 
@@ -276,13 +276,13 @@ function getTweetTextForKeywords(node) {
 function hasEmoji(node) {
   if (!node) return false;
 
-  if (emojiRegex.test(node.textContent || '')) return true;
+  if (emojiRegex.test(node.textContent ?? '')) return true;
 
   const imgs = node.querySelectorAll('img');
   for (const img of imgs) {
-    const src = img.src || '';
+    const src = img.src ?? '';
     if (src.includes('emoji') || src.includes('twemoji')) return true;
-    if (img.alt && emojiRegex.test(img.alt)) return true;
+    if (emojiRegex.test(img.alt ?? '')) return true;
   }
   return false;
 }

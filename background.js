@@ -43,7 +43,7 @@ const storageQueue = new AsyncQueue();
 
 storageQueue.enqueue(async () => {
   const items = await chrome.storage.local.get(getStorageDefaults('blockedHistory'));
-  const history = items.blockedHistory || [];
+  const history = items.blockedHistory ?? [];
   for (const item of history) {
     if (item.id) globalSpamCache.add(item.id);
   }
@@ -131,11 +131,11 @@ class AutoBlockManager {
         );
         const items = await chrome.storage.local.get(defaults);
 
-        this.queue = items.autoBlockQueue || [];
-        this.countToday = items.autoBlockToday || 0;
-        this.lastDate = items.autoBlockLastDate || '';
-        this.pausedUntil = items.autoBlockPausedUntil || 0;
-        this.blockedUsersSet = new Set(items.blockedUsersOnX || []);
+        this.queue = items.autoBlockQueue ?? [];
+        this.countToday = items.autoBlockToday ?? 0;
+        this.lastDate = items.autoBlockLastDate ?? '';
+        this.pausedUntil = items.autoBlockPausedUntil ?? 0;
+        this.blockedUsersSet = new Set(items.blockedUsersOnX ?? []);
 
         await this.checkDailyReset();
 
@@ -306,13 +306,13 @@ function handleRemoveSpamRecord(id, time) {
     const storageItems = await chrome.storage.local.get(
       getStorageDefaults('blockedCount', 'blockedHistory'),
     );
-    let history = storageItems.blockedHistory || [];
+    let history = storageItems.blockedHistory ?? [];
     const originalLength = history.length;
     history = history.filter((item) => !(item.id === id && item.time === time));
 
     const removedCount = originalLength - history.length;
     if (removedCount > 0) {
-      const newCount = Math.max(0, (storageItems.blockedCount || 0) - removedCount);
+      const newCount = Math.max(0, (storageItems.blockedCount ?? 0) - removedCount);
       await chrome.storage.local.set({
         blockedCount: newCount,
         blockedHistory: history,
@@ -357,7 +357,7 @@ function handleRecordSpam(items) {
       autoBlockManager.enqueueBatch(autoBlockScreenNames);
     }
 
-    const history = storageItems.blockedHistory || [];
+    const history = storageItems.blockedHistory ?? [];
     const historyIds = new Set(history.map((h) => h.id));
     const uniqueSpams = newSpams.filter((s) => !historyIds.has(s.id));
 
@@ -369,7 +369,7 @@ function handleRecordSpam(items) {
     }
 
     await chrome.storage.local.set({
-      blockedCount: (storageItems.blockedCount || 0) + uniqueSpams.length,
+      blockedCount: (storageItems.blockedCount ?? 0) + uniqueSpams.length,
       blockedHistory: history,
     });
   });

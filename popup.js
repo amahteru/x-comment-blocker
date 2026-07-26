@@ -443,7 +443,7 @@ async function renderCloudKeywords() {
     getStorageDefaults('cloudKeywords', 'disabledCloudKeywords'),
   );
   let cloudList = parseKeywords(items.cloudKeywords);
-  let disabledList = items.disabledCloudKeywords || [];
+  let disabledList = items.disabledCloudKeywords ?? [];
 
   if (currentCloudSearchQuery !== '') {
     cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
@@ -673,10 +673,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     ),
   );
 
-  whitelist = items.whitelist || [];
+  whitelist = items.whitelist ?? [];
 
   userKeywords = parseKeywords(items.keywords);
-  autoBlockKeywords = items.autoBlockKeywords || [];
+  autoBlockKeywords = items.autoBlockKeywords ?? [];
 
   // Clean up autoBlockKeywords (remove words that are no longer in either list)
   const allValidKeywordsSet = new Set(
@@ -697,7 +697,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   blockEmojiEl.checked = items.blockEmoji;
   enableToggleEl.checked = items.enabled;
   cloudToggleEl.checked = items.cloudEnabled;
-  blockedCountEl.textContent = items.blockedCount || 0;
+  blockedCountEl.textContent = items.blockedCount ?? 0;
 
   updateEnabledState();
   renderUserKeywords();
@@ -891,14 +891,14 @@ function applyHistoryFilter() {
 
   if (currentSearchQuery !== '') {
     filtered = filtered.filter((item) => {
-      const text = (item.text || '').toLowerCase();
+      const text = item.text?.toLowerCase() ?? '';
 
-      let user = (item.user || '').toLowerCase();
+      let user = item.user?.toLowerCase() ?? '';
       if (user.startsWith('/')) {
         user = `@${user.substring(1)}`;
       }
 
-      const displayName = (item.displayName || '').toLowerCase();
+      const displayName = item.displayName?.toLowerCase() ?? '';
       return (
         text.includes(currentSearchQuery) ||
         user.includes(currentSearchQuery) ||
@@ -977,7 +977,7 @@ function renderHistoryPage() {
     } else {
       const userSpan = document.createElement('span');
       userSpan.className = 'history-display-name';
-      userSpan.textContent = item.user || '未知用户';
+      userSpan.textContent = item.user ?? '未知用户';
       highlightText(userSpan, currentSearchQuery);
       userInfo.appendChild(userSpan);
     }
@@ -1070,7 +1070,7 @@ function renderHistoryPage() {
             const currentItems = await chrome.storage.local.get(
               getStorageDefaults('blockedUsersOnX'),
             );
-            let currentList = currentItems.blockedUsersOnX || [];
+            let currentList = currentItems.blockedUsersOnX ?? [];
 
             if (!isCurrentlyBlocked) {
               if (!currentList.includes(screenName)) currentList.push(screenName);
