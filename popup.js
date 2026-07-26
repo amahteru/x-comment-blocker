@@ -309,7 +309,7 @@ function addKeyword() {
   const inputKws = parseKeywords(newKeywordInput.value);
   if (inputKws.length === 0) return;
 
-  const newKws = Array.from(new Set(inputKws).difference(new Set(userKeywords)));
+  const newKws = new Set(inputKws).difference(new Set(userKeywords)).values().toArray();
 
   newKeywordInput.value = '';
   newKeywordInput.focus();
@@ -372,17 +372,12 @@ importFile.addEventListener('change', (e) => {
     }
 
     if (newKeywords.length > 0) {
-      let addedCount = 0;
-      newKeywords.forEach((kw) => {
-        if (!userKeywords.includes(kw)) {
-          userKeywords.push(kw);
-          addedCount++;
-        }
-      });
-      if (addedCount > 0) {
+      const newKws = new Set(newKeywords).difference(new Set(userKeywords));
+      if (newKws.size > 0) {
+        userKeywords.push(...newKws);
         renderUserKeywords();
         autoSave();
-        showStatus(`成功导入 ${addedCount} 个新词`);
+        showStatus(`成功导入 ${newKws.size} 个新词`);
       } else {
         showStatus('未发现新词，词库已包含这些内容');
       }
@@ -697,7 +692,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     Iterator.concat(userKeywords, parseKeywords(items.cloudKeywords || ''))
   );
   const originalAutoBlockLength = autoBlockKeywords.length;
-  autoBlockKeywords = Array.from(new Set(autoBlockKeywords).intersection(allValidKeywordsSet));
+  autoBlockKeywords = new Set(autoBlockKeywords).intersection(allValidKeywordsSet).values().toArray();
   if (originalAutoBlockLength !== autoBlockKeywords.length) {
     await chrome.storage.local.set({ autoBlockKeywords });
   }
@@ -833,7 +828,7 @@ function updateFilterOptions() {
     }
   });
 
-  const reasons = Array.from(reasonsSet);
+  const reasons = reasonsSet.values().toArray();
   // Sort so that '__blocked_on_x__' is always at a predictable position if desired, or just leave it at the end
   // Sort alphabetically but put __blocked_on_x__ at the top
   reasons.sort((a, b) => {
@@ -1153,7 +1148,7 @@ function renderHistoryPage() {
   }
   historyList.appendChild(fragment);
 
-  const nameSpans = Array.from(historyList.querySelectorAll('.history-display-name'));
+  const nameSpans = historyList.querySelectorAll('.history-display-name').values().toArray();
   const overflowingSpans = nameSpans.filter((span) => span.scrollWidth > span.clientWidth);
   overflowingSpans.forEach((span) => span.classList.add('is-overflowing'));
 

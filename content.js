@@ -46,13 +46,13 @@ async function mergeKeywords() {
     const userKws = parseKeywords(items.keywords);
     const disabledCloudKws = items.disabledCloudKeywords || [];
     const cloudKws = items.cloudEnabled
-      ? parseKeywords(items.cloudKeywords).filter((kw) => !disabledCloudKws.includes(kw))
+      ? new Set(parseKeywords(items.cloudKeywords)).difference(new Set(disabledCloudKws)).values().toArray()
       : [];
 
     const blockKeywordsSet = new Set(Iterator.concat(cloudKws, userKws));
-    const blockKeywords = Array.from(blockKeywordsSet);
+    const blockKeywords = blockKeywordsSet.values().toArray();
     const rawAutoBlockKws = items.autoBlockKeywords || [];
-    const autoBlockKws = Array.from(new Set(rawAutoBlockKws).intersection(blockKeywordsSet));
+    const autoBlockKws = new Set(rawAutoBlockKws).intersection(blockKeywordsSet).values().toArray();
 
     const newKey = `${blockKeywords.join('\n')}|AUTO:|${autoBlockKws.join('\n')}`;
     if (newKey === lastKeywordsKey) return;
@@ -164,7 +164,7 @@ async function mergeKeywords() {
         queueMicrotask(() => {
           observerFlushScheduled = false;
           if (pendingTweets.size > 0) {
-            filterTweets(Array.from(pendingTweets));
+            filterTweets(pendingTweets.values().toArray());
             pendingTweets.clear();
           }
         });
@@ -527,8 +527,9 @@ function filterTweets(specificTweets = null) {
       if (!localSentIds.has(uniqueId)) {
         localSentIds.add(uniqueId);
         if (localSentIds.size > 2000) {
-          const iter = localSentIds.values();
-          for (let i = 0; i < 500; i++) localSentIds.delete(iter.next().value);
+          for (const val of localSentIds.values().take(500)) {
+            localSentIds.delete(val);
+          }
         }
 
         pendingSpam.push({

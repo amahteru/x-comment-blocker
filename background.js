@@ -206,7 +206,7 @@ class AutoBlockManager {
             this.countToday++;
             this.blockedUsersSet.add(currentItem);
 
-            let blockedUsersArray = Array.from(this.blockedUsersSet);
+            let blockedUsersArray = this.blockedUsersSet.values().toArray();
             if (blockedUsersArray.length > 5000) {
               blockedUsersArray = blockedUsersArray.slice(-5000);
               this.blockedUsersSet = new Set(blockedUsersArray);
@@ -344,8 +344,9 @@ function handleRecordSpam(items) {
           isAutoBlock: item.isAutoBlock,
         });
         if (globalSpamCache.size > 5000) {
-          const iter = globalSpamCache.values();
-          for (let i = 0; i < 1000; i++) globalSpamCache.delete(iter.next().value);
+          for (const val of globalSpamCache.values().take(1000)) {
+            globalSpamCache.delete(val);
+          }
         }
       }
     }
@@ -422,14 +423,9 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
 
     const items = await chrome.storage.local.get(getStorageDefaults('keywords'));
     const existing = parseKeywords(items.keywords);
-    let added = false;
-    for (const kw of inputKws) {
-      if (!existing.includes(kw)) {
-        existing.push(kw);
-        added = true;
-      }
-    }
-    if (added) {
+    const newKws = new Set(inputKws).difference(new Set(existing));
+    if (newKws.size > 0) {
+      existing.push(...newKws);
       await chrome.storage.local.set({ keywords: existing.join('\n') });
     }
   }
