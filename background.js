@@ -69,7 +69,7 @@ storageQueue.enqueue(async () => {
   const history = items.blockedHistory ?? [];
   Iterator.from(history)
     .filter((item) => item.id)
-    .forEach((item) => globalSpamCache.add(item.id));
+    .forEach((item) => { globalSpamCache.add(item.id); });
 });
 
 async function doSync() {

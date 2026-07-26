@@ -414,9 +414,9 @@ function relativeTime(ts) {
   const tsInstant = Temporal.Instant.fromEpochMilliseconds(ts);
   const diffSec = Temporal.Now.instant().until(tsInstant).total('seconds');
   if (diffSec > -60) return '刚刚同步';
-  if (diffSec > -3600) return rtf.format(Math.ceil(diffSec / 60), 'minute') + '同步';
-  if (diffSec > -86400) return rtf.format(Math.ceil(diffSec / 3600), 'hour') + '同步';
-  return rtf.format(Math.ceil(diffSec / 86400), 'day') + '同步';
+  if (diffSec > -3600) return `${rtf.format(Math.ceil(diffSec / 60), 'minute')}同步`;
+  if (diffSec > -86400) return `${rtf.format(Math.ceil(diffSec / 3600), 'hour')}同步`;
+  return `${rtf.format(Math.ceil(diffSec / 86400), 'day')}同步`;
 }
 
 async function updateCloudInfo() {
@@ -796,7 +796,7 @@ if (filterHistoryBtn && filterDropdown) {
       if (reason !== currentFilterReason) {
         filterDropdown
           .querySelectorAll('.filter-option')
-          .forEach((opt) => opt.classList.remove('active'));
+          .forEach((opt) => { opt.classList.remove('active'); });
         option.classList.add('active');
 
         currentFilterReason = reason;
@@ -1138,7 +1138,7 @@ function renderHistoryPage() {
 
   Iterator.from(historyList.querySelectorAll('.history-display-name'))
     .filter((span) => span.scrollWidth > span.clientWidth)
-    .forEach((span) => span.classList.add('is-overflowing'));
+    .forEach((span) => { span.classList.add('is-overflowing'); });
 
   historyNextIndex = end;
   isHistoryLoading = false;

@@ -72,8 +72,8 @@
         const customRegexes = [];
 
         for (const kw of keywords) {
-          let match;
-          if (kw.startsWith('/') && (match = kw.match(/^\/(?<pattern>.+)\/(?<flags>[a-zA-Z]*)$/))) {
+          const match = kw.startsWith('/') ? kw.match(/^\/(?<pattern>.+)\/(?<flags>[a-zA-Z]*)$/) : null;
+          if (match) {
             try {
               customRegexes.push(new RegExp(match.groups.pattern, match.groups.flags));
             } catch (e) {
@@ -144,7 +144,7 @@
                 pendingTweets.add(node);
               } else if (node.querySelector) {
                 const innerTweets = node.querySelectorAll('[data-testid="cellInnerDiv"]');
-                innerTweets.forEach((t) => pendingTweets.add(t));
+                innerTweets.forEach((t) => { pendingTweets.add(t); });
               }
             }
           }
