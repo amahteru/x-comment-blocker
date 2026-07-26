@@ -108,7 +108,7 @@ async function mergeKeywords() {
         'blockSpecialChars',
         'blockEmoji',
         'enabled',
-        'whitelist'
+        'whitelist',
       ),
     );
 

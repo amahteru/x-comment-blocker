@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'blockedCount',
       'lastSyncTime',
       'cloudKeywords',
-      'whitelist'
+      'whitelist',
     ),
   );
 
@@ -1183,19 +1183,17 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
     whitelistCount.textContent = '(0)';
     return;
   }
-  
+
   whitelistCount.textContent = `(${whitelist.length})`;
-  
   whitelist.forEach((handle, index) => {
     const itemEl = document.createElement('span');
     itemEl.className = 'keyword-tag' + 
       (index === animateIndex ? ' fade-in-tag' : '') + 
       (index === fadeIndex ? ' fade-in' : '');
-    
     const textSpan = document.createElement('span');
     textSpan.className = 'tag-text';
     textSpan.textContent = `@${handle}`;
-    
+
     const editBtn = document.createElement('button');
     editBtn.className = 'tag-btn tag-btn-edit';
     editBtn.title = '编辑';
@@ -1217,7 +1215,7 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
         });
       }, 200);
     };
-    
+
     itemEl.appendChild(textSpan);
     itemEl.appendChild(editBtn);
     itemEl.appendChild(delBtn);
@@ -1232,7 +1230,7 @@ function startEditWhitelist(tagEl, oldHandle) {
   const input = document.createElement('input');
   input.className = 'tag-edit-input';
   input.value = oldHandle;
-  
+
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       confirmEditWhitelist(input, oldHandle);
@@ -1267,10 +1265,10 @@ function confirmEditWhitelist(inputEl, oldHandle) {
     showStatus('请输入有效的用户名');
     return;
   }
-  
+
   const existingIndex = whitelist.indexOf(newVal);
   const oldIndex = whitelist.indexOf(oldHandle);
-  
+
   if (existingIndex === -1 || existingIndex === oldIndex) {
     if (whitelist[oldIndex] !== newVal) {
       whitelist[oldIndex] = newVal;
