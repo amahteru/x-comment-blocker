@@ -54,7 +54,7 @@ async function mergeKeywords() {
     const activeBlockSet = new Set(blockKeywords);
     const autoBlockKws = rawAutoBlockKws.filter((kw) => activeBlockSet.has(kw));
 
-    const newKey = blockKeywords.join('\n') + '|AUTO:|' + autoBlockKws.join('\n');
+    const newKey = `${blockKeywords.join('\n')}|AUTO:|${autoBlockKws.join('\n')}`;
     if (newKey === lastKeywordsKey) return;
     lastKeywordsKey = newKey;
 
@@ -147,7 +147,7 @@ async function mergeKeywords() {
             mutation.target.nodeType === Node.ELEMENT_NODE
               ? mutation.target
               : mutation.target.parentElement;
-          if (el && el.closest) {
+          if (el?.closest) {
             if (!el.closest('[data-testid="tweetText"], [data-testid="User-Name"]')) {
               continue;
             }
@@ -528,7 +528,7 @@ function filterTweets(specificTweets = null) {
         .replace(/\s+/g, ' ')
         .trim();
 
-      const uniqueId = tweetId ? tweetId : normalizedBody + '|' + stableHandle;
+      const uniqueId = tweetId ? tweetId : `${normalizedBody}|${stableHandle}`;
 
       if (!localSentIds.has(uniqueId)) {
         localSentIds.add(uniqueId);

@@ -201,7 +201,7 @@ class AutoBlockManager {
 
         try {
           const res = await handleBlockUser(currentItem, true);
-          if (res && res.success) {
+          if (res?.success) {
             this.queue.shift();
             this.countToday++;
             this.blockedUsersSet.add(currentItem);
@@ -218,8 +218,7 @@ class AutoBlockManager {
               blockedUsersOnX: blockedUsersArray,
             });
           } else if (
-            res &&
-            res.reason &&
+            res?.reason &&
             (res.reason.includes('429') || res.reason.includes('HTTP 429'))
           ) {
             console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
