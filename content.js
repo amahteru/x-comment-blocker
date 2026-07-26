@@ -46,7 +46,10 @@ async function mergeKeywords() {
     const userKws = parseKeywords(items.keywords);
     const disabledCloudKws = items.disabledCloudKeywords || [];
     const cloudKws = items.cloudEnabled
-      ? new Set(parseKeywords(items.cloudKeywords)).difference(new Set(disabledCloudKws)).values().toArray()
+      ? new Set(parseKeywords(items.cloudKeywords))
+          .difference(new Set(disabledCloudKws))
+          .values()
+          .toArray()
       : [];
 
     const blockKeywordsSet = new Set(Iterator.concat(cloudKws, userKws));
