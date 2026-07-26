@@ -73,9 +73,9 @@
 
         for (const kw of keywords) {
           let match;
-          if (kw.startsWith('/') && (match = kw.match(/^\/(.+)\/([a-zA-Z]*)$/))) {
+          if (kw.startsWith('/') && (match = kw.match(/^\/(?<pattern>.+)\/(?<flags>[a-zA-Z]*)$/))) {
             try {
-              customRegexes.push(new RegExp(match[1], match[2]));
+              customRegexes.push(new RegExp(match.groups.pattern, match.groups.flags));
             } catch (e) {
               console.warn('[X-Blocker] Invalid regex ignored:', kw, e);
             }
@@ -249,15 +249,20 @@
   function getTweetTextForKeywords(node) {
     if (!node) return '';
     let text = '';
-    function traverse(n) {
-      if (n.nodeType === Node.TEXT_NODE) {
-        text += n.textContent;
-      } else if (n.nodeType === Node.ELEMENT_NODE) {
-        if (n.tagName.toLowerCase() === 'img' && n.alt) {
-          let altText = n.alt;
+    const walker = document.createTreeWalker(
+      node,
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
+    );
+    let currentNode = walker.currentNode;
+    while (currentNode) {
+      if (currentNode.nodeType === Node.TEXT_NODE) {
+        text += currentNode.textContent;
+      } else if (currentNode.nodeType === Node.ELEMENT_NODE) {
+        if (currentNode.tagName.toLowerCase() === 'img' && currentNode.alt) {
+          let altText = currentNode.alt;
           if (
-            n.src &&
-            (n.src.includes('emoji') || n.src.includes('twemoji')) &&
+            currentNode.src &&
+            (currentNode.src.includes('emoji') || currentNode.src.includes('twemoji')) &&
             !altText.endsWith('\uFE0F')
           ) {
             if (altText.length <= 2) {
@@ -265,14 +270,10 @@
             }
           }
           text += altText;
-        } else {
-          for (const child of n.childNodes) {
-            traverse(child);
-          }
         }
       }
+      currentNode = walker.nextNode();
     }
-    traverse(node);
     return text;
   }
 
@@ -281,29 +282,23 @@
 
     if (emojiRegex.test(node.textContent ?? '')) return true;
 
-    const imgs = node.querySelectorAll('img');
-    for (const img of imgs) {
+    return Iterator.from(node.querySelectorAll('img')).some((img) => {
       const src = img.src ?? '';
       if (src.includes('emoji') || src.includes('twemoji')) return true;
-      if (emojiRegex.test(img.alt ?? '')) return true;
-    }
-    return false;
+      return emojiRegex.test(img.alt ?? '');
+    });
   }
 
   function getTweetStatusInfo(tweet, pageStatusId) {
-    const timeNodes = tweet.querySelectorAll('time');
-    for (const timeEl of timeNodes) {
-      const link = timeEl.closest('a');
-      if (link) {
-        const href = link.getAttribute('href');
-        const match = href ? href.match(/\/status\/(\d+)/i) : null;
-        if (match) {
-          return {
-            id: match[1],
-            isMainTweet: pageStatusId ? match[1] === pageStatusId : false,
-          };
-        }
-      }
+    const timeMatch = Iterator.from(tweet.querySelectorAll('time'))
+      .map((timeEl) => timeEl.closest('a')?.getAttribute('href')?.match(/\/status\/(\d+)/i))
+      .find((m) => m);
+
+    if (timeMatch) {
+      return {
+        id: timeMatch[1],
+        isMainTweet: pageStatusId ? timeMatch[1] === pageStatusId : false,
+      };
     }
     return { id: null, isMainTweet: false };
   }
@@ -433,12 +428,16 @@
     const pendingSpam = [];
     const pageContext = getPageContext();
 
-    tweets.forEach((tweet) => {
+    for (const tweet of tweets) {
       const userNode = tweet.querySelector('[data-testid="User-Name"]');
       const textNode = tweet.querySelector('[data-testid="tweetText"]');
       const isStatusPage = resolveStatusPage(tweet, pageContext);
 
-      const state = tweetStateMap.getOrInsert(tweet, {});
+      let state = tweetStateMap.get(tweet);
+      if (!state) {
+        state = {};
+        tweetStateMap.set(tweet, state);
+      }
 
       let logicalPageStatusId = pageContext.pageStatusId;
       if (pageContext.isPhotoVideoOverlay && tweet.closest('[role="dialog"]') === null) {
@@ -460,10 +459,10 @@
         } else {
           tweet.classList.remove('x-comment-blocker-hidden');
         }
-        return;
+        continue;
       }
 
-      if (tweet.closest('[aria-hidden="true"]')) return;
+      if (tweet.closest('[aria-hidden="true"]')) continue;
       state.quickHash = quickHash;
 
       let shouldCheck =
@@ -480,7 +479,7 @@
           isMainTweet = statusInfo.isMainTweet;
           if (!tweet.querySelector('article')) {
             state.quickHash = '';
-            return;
+            continue;
           }
         }
       }
@@ -538,7 +537,7 @@
       } else {
         tweet.classList.remove('x-comment-blocker-hidden');
       }
-    });
+    }
 
     if (pendingSpam.length > 0) {
       try {

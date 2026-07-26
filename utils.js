@@ -11,7 +11,7 @@ export function extractCleanScreenName(input) {
   if (match) return match.groups.handle.toLowerCase();
   return cleaned
     .replace(/^[@/]+/, '')
-    .split(/[/?]/)[0]
+    .split(/[/?]/).at(0)
     .toLowerCase();
 }
 

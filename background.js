@@ -264,7 +264,8 @@ class AutoBlockManager {
 }
 
 const autoBlockManager = new AutoBlockManager();
-autoBlockManager.init().then(() => autoBlockManager.process());
+await autoBlockManager.init();
+autoBlockManager.process();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   void sender;

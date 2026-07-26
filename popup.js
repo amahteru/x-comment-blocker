@@ -7,7 +7,7 @@ import {
 } from './utils.js';
 
 let userKeywords = [];
-let autoBlockKeywords = [];
+let autoBlockKeywords = new Set();
 let isLoading = true;
 let isEditingAutoBlock = false;
 
@@ -89,7 +89,7 @@ async function autoSave() {
 
   await chrome.storage.local.set({
     keywords: userKeywords.join('\n'),
-    autoBlockKeywords,
+    autoBlockKeywords: autoBlockKeywords.values().toArray(),
     checkUsername: checkUsernameEl.checked,
     onlyComments: onlyCommentsEl.checked,
     blockSpecialChars: blockSpecialCharsEl.checked,
@@ -201,7 +201,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
     });
 
     const isRegex = isKeywordRegex(kw);
-    const isAutoBlock = autoBlockKeywords.includes(kw);
+    const isAutoBlock = autoBlockKeywords.has(kw);
 
     let tagChildren = [];
     if (isEditingAutoBlock) {
@@ -211,9 +211,9 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
         checked: isAutoBlock,
         onchange: (e) => {
           if (e.target.checked) {
-            if (!autoBlockKeywords.includes(kw)) autoBlockKeywords.push(kw);
+            autoBlockKeywords.add(kw);
           } else {
-            autoBlockKeywords = autoBlockKeywords.filter((k) => k !== kw);
+            autoBlockKeywords.delete(kw);
           }
         },
       });
@@ -242,7 +242,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
 
   keywordList.replaceChildren(...tags);
   keywordCount.textContent = `共 ${userKeywords.length} 个自定义词`;
-  autoBlockCount.textContent = autoBlockKeywords.length;
+  autoBlockCount.textContent = autoBlockKeywords.size;
 }
 
 function startEdit(tagEl, index) {
@@ -474,7 +474,7 @@ async function renderCloudKeywords() {
     highlightText(textSpan, currentCloudSearchQuery);
 
     const isDisabled = disabledList.includes(kw);
-    const isAutoBlock = autoBlockKeywords.includes(kw);
+    const isAutoBlock = autoBlockKeywords.has(kw);
 
     let tagChildren = [];
     if (isEditingCloudAutoBlock) {
@@ -484,9 +484,9 @@ async function renderCloudKeywords() {
         checked: isAutoBlock,
         onchange: (e) => {
           if (e.target.checked) {
-            if (!autoBlockKeywords.includes(kw)) autoBlockKeywords.push(kw);
+            autoBlockKeywords.add(kw);
           } else {
-            autoBlockKeywords = autoBlockKeywords.filter((k) => k !== kw);
+            autoBlockKeywords.delete(kw);
           }
         },
       });
@@ -596,7 +596,7 @@ async function triggerCloudSync(manual = false) {
       // Reload state after successful sync
       const items = await chrome.storage.local.get(['autoBlockKeywords']);
       if (items.autoBlockKeywords) {
-        autoBlockKeywords = items.autoBlockKeywords;
+        autoBlockKeywords = new Set(items.autoBlockKeywords);
       }
       if (cloudModal.classList.contains('open')) {
         renderCloudKeywords();
@@ -671,19 +671,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   whitelist = items.whitelist ?? [];
 
   userKeywords = parseKeywords(items.keywords);
-  autoBlockKeywords = items.autoBlockKeywords ?? [];
+  const rawAutoBlockKeywords = items.autoBlockKeywords ?? [];
 
   // Clean up autoBlockKeywords (remove words that are no longer in either list)
   const allValidKeywordsSet = new Set(
     Iterator.concat(userKeywords, parseKeywords(items.cloudKeywords || '')),
   );
-  const originalAutoBlockLength = autoBlockKeywords.length;
-  autoBlockKeywords = new Set(autoBlockKeywords)
-    .intersection(allValidKeywordsSet)
-    .values()
-    .toArray();
-  if (originalAutoBlockLength !== autoBlockKeywords.length) {
-    await chrome.storage.local.set({ autoBlockKeywords });
+  autoBlockKeywords = new Set(rawAutoBlockKeywords).intersection(allValidKeywordsSet);
+  if (rawAutoBlockKeywords.length !== autoBlockKeywords.size) {
+    await chrome.storage.local.set({ autoBlockKeywords: autoBlockKeywords.values().toArray() });
   }
 
   checkUsernameEl.checked = items.checkUsername;
