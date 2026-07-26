@@ -139,7 +139,7 @@ export async function syncCloudKeywords() {
     });
     return true;
   } catch (e) {
-    const isTimeout = (e instanceof Error) && (e.name === 'TimeoutError' || e.name === 'AbortError');
+    const isTimeout = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
     await chrome.storage.local
       .set({
         syncStatus: 'error',
