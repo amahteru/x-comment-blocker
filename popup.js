@@ -692,7 +692,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     Iterator.concat(userKeywords, parseKeywords(items.cloudKeywords || '')),
   );
   const originalAutoBlockLength = autoBlockKeywords.length;
-  autoBlockKeywords = new Set(autoBlockKeywords).intersection(allValidKeywordsSet).values().toArray();
+  autoBlockKeywords = new Set(autoBlockKeywords)
+    .intersection(allValidKeywordsSet)
+    .values()
+    .toArray();
   if (originalAutoBlockLength !== autoBlockKeywords.length) {
     await chrome.storage.local.set({ autoBlockKeywords });
   }
