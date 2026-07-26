@@ -3,7 +3,7 @@ const CLOUD_KEYWORDS_URL =
   'https://api.github.com/repos/ethanzhou-dev/x-comment-blocker/contents/keywords.txt';
 const SYNC_INTERVAL_MINUTES = 360;
 const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
-const invisibleCharsRegex = /[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/gv;
+const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
 
 function extractCleanScreenName(input) {
   if (!input) return '';
@@ -125,7 +125,7 @@ async function syncCloudKeywords() {
 
     const cloudListSet = new Set(cloudList);
     const cleanedDisabled = Array.from(new Set(disabledCloudKeywords).intersection(cloudListSet));
-    const allValidKeywordsSet = new Set(userKws).union(cloudListSet);
+    const allValidKeywordsSet = new Set(Iterator.concat(userKws, cloudListSet));
     const cleanedAutoBlock = Array.from(
       new Set(autoBlockKeywords).intersection(allValidKeywordsSet),
     );
