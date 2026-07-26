@@ -431,7 +431,7 @@ function filterTweets(specificTweets = null) {
     const textNode = tweet.querySelector('[data-testid="tweetText"]');
     const isStatusPage = resolveStatusPage(tweet, pageContext);
 
-    let state = tweetStateMap.getOrInsert(tweet, {});
+    const state = tweetStateMap.getOrInsert(tweet, {});
 
     let logicalPageStatusId = pageContext.pageStatusId;
     if (pageContext.isPhotoVideoOverlay && tweet.closest('[role="dialog"]') === null) {
