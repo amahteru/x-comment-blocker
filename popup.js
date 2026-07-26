@@ -1206,9 +1206,9 @@ closeHistoryBtn.addEventListener('click', () => {
 
 function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
   whitelistList.innerHTML = '';
-  
-  const filteredWhitelist = whitelist.filter(handle => 
-    handle.toLowerCase().includes(currentWhitelistSearchQuery)
+
+  const filteredWhitelist = whitelist.filter((handle) =>
+    handle.toLowerCase().includes(currentWhitelistSearchQuery),
   );
 
   if (filteredWhitelist.length === 0) {
