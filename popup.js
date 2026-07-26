@@ -1176,7 +1176,7 @@ closeHistoryBtn.addEventListener('click', () => {
   }
 });
 
-function renderWhitelist() {
+function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
   whitelistList.innerHTML = '';
   if (whitelist.length === 0) {
     whitelistList.innerHTML = '<div class="empty-hint">暂无白名单用户</div>';
@@ -1186,9 +1186,11 @@ function renderWhitelist() {
   
   whitelistCount.textContent = `(${whitelist.length})`;
   
-  whitelist.forEach((handle) => {
+  whitelist.forEach((handle, index) => {
     const itemEl = document.createElement('span');
-    itemEl.className = 'keyword-tag';
+    itemEl.className = 'keyword-tag' + 
+      (index === animateIndex ? ' fade-in-tag' : '') + 
+      (index === fadeIndex ? ' fade-in' : '');
     
     const textSpan = document.createElement('span');
     textSpan.className = 'tag-text';
@@ -1205,10 +1207,15 @@ function renderWhitelist() {
     delBtn.title = '删除';
     delBtn.innerHTML = ICON_DEL;
     delBtn.onclick = () => {
-      whitelist = whitelist.filter(h => h !== handle);
-      chrome.storage.local.set({ whitelist }, () => {
-        renderWhitelist();
-      });
+      itemEl.classList.remove('fade-in-tag');
+      itemEl.classList.add('fade-out-tag');
+      const hToRemove = handle;
+      setTimeout(() => {
+        whitelist = whitelist.filter(h => h !== hToRemove);
+        chrome.storage.local.set({ whitelist }, () => {
+          renderWhitelist();
+        });
+      }, 200);
     };
     
     itemEl.appendChild(textSpan);
@@ -1298,10 +1305,11 @@ addWhitelistBtn.addEventListener('click', () => {
     return;
   }
   if (!whitelist.includes(handle)) {
-    whitelist.unshift(handle);
+    whitelist.push(handle);
     chrome.storage.local.set({ whitelist }, () => {
-      renderWhitelist();
+      renderWhitelist(whitelist.length - 1);
       newWhitelistUser.value = '';
+      whitelistList.scrollTop = whitelistList.scrollHeight;
     });
   } else {
     showStatus('该用户已在白名单中');
