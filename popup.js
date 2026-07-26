@@ -689,7 +689,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Clean up autoBlockKeywords (remove words that are no longer in either list)
   const allValidKeywordsSet = new Set(
-    Iterator.concat(userKeywords, parseKeywords(items.cloudKeywords || ''))
+    Iterator.concat(userKeywords, parseKeywords(items.cloudKeywords || '')),
   );
   const originalAutoBlockLength = autoBlockKeywords.length;
   autoBlockKeywords = new Set(autoBlockKeywords).intersection(allValidKeywordsSet).values().toArray();
