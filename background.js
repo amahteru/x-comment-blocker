@@ -125,7 +125,7 @@ class AutoBlockManager {
   initPromise = null;
 
   async checkDailyReset() {
-    const today = new Date().toDateString();
+    const today = Temporal.Now.plainDateISO().toString();
     if (this.lastDate !== today) {
       this.lastDate = today;
       this.countToday = 0;
@@ -194,9 +194,11 @@ class AutoBlockManager {
       while (true) {
         await this.checkDailyReset();
 
-        if (this.pausedUntil > Date.now()) {
+        const now = Temporal.Now.instant();
+        if (this.pausedUntil > now.epochMilliseconds) {
+          const pausedUntilInstant = Temporal.Instant.fromEpochMilliseconds(this.pausedUntil);
           console.warn(
-            `[X-Blocker] Auto block paused for ${Math.ceil((this.pausedUntil - Date.now()) / 1000)}s.`,
+            `[X-Blocker] Auto block paused for ${Math.ceil(now.until(pausedUntilInstant).total('seconds'))}s.`,
           );
           break;
         }
@@ -233,7 +235,7 @@ class AutoBlockManager {
             (res.reason.includes('429') || res.reason.includes('HTTP 429'))
           ) {
             console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
-            this.pausedUntil = Date.now() + 15 * 60 * 1000;
+            this.pausedUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
             await this.saveState({ autoBlockPausedUntil: this.pausedUntil });
             break;
           } else {
@@ -264,27 +266,24 @@ class AutoBlockManager {
 }
 
 const autoBlockManager = new AutoBlockManager();
-await autoBlockManager.init();
-autoBlockManager.process();
+autoBlockManager.init().then(() => {
+  autoBlockManager.process();
+});
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender) => {
   void sender;
   if (message.action === 'syncNow') {
-    doSync().then(sendResponse);
-    return true;
+    return doSync();
   }
   if (message.action === 'blockUserOnX') {
-    handleBlockUser(message.screenName, true).then(sendResponse);
-    return true;
+    return handleBlockUser(message.screenName, true);
   }
   if (message.action === 'unblockUserOnX') {
-    handleBlockUser(message.screenName, false).then(sendResponse);
-    return true;
+    return handleBlockUser(message.screenName, false);
   }
   if (message.action === 'recordSpam') {
     handleRecordSpam(message.items);
-    sendResponse({ success: true });
-    return false;
+    return Promise.resolve({ success: true });
   }
   if (message.action === 'clearSpamCache') {
     storageQueue.enqueue(async () => {
@@ -292,13 +291,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await chrome.storage.local.set({ blockedCount: 0, blockedHistory: [] });
     });
     notifyContentScripts({ action: 'clearLocalSentIds' });
-    sendResponse({ success: true });
-    return false;
+    return Promise.resolve({ success: true });
   }
   if (message.action === 'removeSpamRecord') {
     handleRemoveSpamRecord(message.id, message.time);
-    sendResponse({ success: true });
-    return false;
+    return Promise.resolve({ success: true });
   }
 });
 
@@ -369,10 +366,11 @@ function handleRecordSpam(items) {
       getStorageDefaults('blockedCount', 'blockedHistory'),
     );
 
-    const autoBlockScreenNames = Iterator.from(newSpams)
-      .filter((s) => s.isAutoBlock)
-      .map((s) => s.user)
-      .toArray();
+    const { autoBlock: autoBlockSpams = [] } = Object.groupBy(newSpams, (s) =>
+      s.isAutoBlock ? 'autoBlock' : 'manual',
+    );
+    const autoBlockScreenNames = autoBlockSpams.map((s) => s.user);
+
     if (autoBlockScreenNames.length > 0) {
       autoBlockManager.enqueueBatch(autoBlockScreenNames);
     }

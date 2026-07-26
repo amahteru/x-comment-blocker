@@ -191,11 +191,11 @@
     if (!isExtensionAlive()) return;
     if (message.action === 'removeLocalSentId' && message.id) {
       localSentIds.delete(message.id);
-      return false;
+      return;
     }
     if (message.action === 'clearLocalSentIds') {
       localSentIds.clear();
-      return false;
+      return;
     }
   });
 
@@ -291,7 +291,7 @@
 
   function getTweetStatusInfo(tweet, pageStatusId) {
     const timeMatch = Iterator.from(tweet.querySelectorAll('time'))
-      .map((timeEl) => timeEl.closest('a')?.getAttribute('href')?.match(/\/status\/(\d+)/i))
+      .map((timeEl) => timeEl.closest('a')?.getAttribute('href')?.match(/\/status\/(\d+)/iv))
       .find((m) => m);
 
     if (timeMatch) {
@@ -304,10 +304,10 @@
   }
 
   function getPageContext() {
-    const urlMatch = window.location.pathname.match(/\/status\/(\d+)/i);
+    const urlMatch = window.location.pathname.match(/\/status\/(\d+)/iv);
     return {
       pageStatusId: urlMatch ? urlMatch[1] : null,
-      isPhotoVideoOverlay: /\/status\/\d+\/(?:photo|video)\//i.test(window.location.pathname),
+      isPhotoVideoOverlay: /\/status\/\d+\/(?:photo|video)\//iv.test(window.location.pathname),
     };
   }
 
@@ -362,7 +362,7 @@
     }
 
     const cleanUserName = userName
-      ? userName.replaceAll(/[\s_.-]+/g, '').replaceAll(invisibleCharsRegex, '')
+      ? userName.replaceAll(/[\s_.-]+/gv, '').replaceAll(invisibleCharsRegex, '')
       : '';
 
     if (matchesAutoBlocklist(tweetBody)) {
@@ -511,7 +511,7 @@
         }
         const normalizedBody = rawTweetText
           .replaceAll(invisibleCharsRegex, '')
-          .replaceAll(/\s+/g, ' ')
+          .replaceAll(/\s+/gv, ' ')
           .trim();
 
         const uniqueId = tweetId ?? `${normalizedBody}|${stableHandle}`;
@@ -530,7 +530,7 @@
             user: stableHandle || userName,
             displayName: displayName || '',
             reason: blockReason,
-            time: Date.now(),
+            time: Temporal.Now.instant().epochMilliseconds,
             isAutoBlock: isAutoBlock,
           });
         }

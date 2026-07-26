@@ -7,11 +7,11 @@ export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
 export function extractCleanScreenName(input) {
   if (!input) return '';
   const cleaned = input.replaceAll(invisibleCharsRegex, '').trim();
-  const match = cleaned.match(/(?:^|\/|@)(?<handle>[a-zA-Z0-9_]{1,15})(?:\/|\?|$)/);
+  const match = cleaned.match(/(?:^|\/|@)(?<handle>[a-zA-Z0-9_]{1,15})(?:\/|\?|$)/v);
   if (match) return match.groups.handle.toLowerCase();
   return cleaned
-    .replace(/^[@/]+/, '')
-    .split(/[/?]/).at(0)
+    .replace(/^[@\/]+/v, '')
+    .split(/[\/?]/v).at(0)
     .toLowerCase();
 }
 
@@ -55,7 +55,7 @@ export function parseKeywords(text) {
     .map((k) => k.replaceAll(invisibleCharsRegex, '').trim())
     .filter((k) => k)
     .map((k) => {
-      if (k.length >= 3 && k.startsWith('/') && /\/[a-zA-Z]*$/.test(k)) {
+      if (k.length >= 3 && k.startsWith('/') && /\/[a-zA-Z]*$/v.test(k)) {
         return k;
       }
       return k.toLowerCase();
@@ -82,7 +82,7 @@ export async function syncCloudKeywords() {
 
     if (resp.status === 304) {
       await chrome.storage.local.set({
-        lastSyncTime: Date.now(),
+        lastSyncTime: Temporal.Now.instant().epochMilliseconds,
         syncStatus: 'ok',
         syncError: '',
       });
@@ -132,7 +132,7 @@ export async function syncCloudKeywords() {
       disabledCloudKeywords: cleanedDisabled,
       autoBlockKeywords: cleanedAutoBlock,
       cloudETag: newETag,
-      lastSyncTime: Date.now(),
+      lastSyncTime: Temporal.Now.instant().epochMilliseconds,
       syncStatus: 'ok',
       syncError: '',
     });

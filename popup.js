@@ -337,7 +337,7 @@ exportBtn.addEventListener('click', () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `x-comment-blocker-keywords-${new Date().toISOString().slice(0, 10)}.txt`;
+  a.download = `x-comment-blocker-keywords-${Temporal.Now.plainDateISO().toString()}.txt`;
   a.click();
   URL.revokeObjectURL(url);
   showStatus('导出成功');
@@ -411,7 +411,8 @@ const rtf = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'always' });
 
 function relativeTime(ts) {
   if (!ts) return '';
-  const diffSec = Math.floor((ts - Date.now()) / 1000);
+  const tsInstant = Temporal.Instant.fromEpochMilliseconds(ts);
+  const diffSec = Temporal.Now.instant().until(tsInstant).total('seconds');
   if (diffSec > -60) return '刚刚同步';
   if (diffSec > -3600) return rtf.format(Math.ceil(diffSec / 60), 'minute') + '同步';
   if (diffSec > -86400) return rtf.format(Math.ceil(diffSec / 3600), 'hour') + '同步';
@@ -610,8 +611,8 @@ async function triggerCloudSync(manual = false) {
   updateCloudInfo();
 
   if (syncBtn.classList.contains('syncing')) {
-    const startTime = parseInt(syncBtn.dataset.syncStartTime || Date.now(), 10);
-    const elapsed = Date.now() - startTime;
+    const startTime = Temporal.Instant.fromEpochMilliseconds(parseInt(syncBtn.dataset.syncStartTime || Temporal.Now.instant().epochMilliseconds, 10));
+    const elapsed = Temporal.Now.instant().since(startTime).total('milliseconds');
     const animationDuration = 1000;
     const mod = elapsed % animationDuration;
     const remaining = mod === 0 ? 0 : animationDuration - mod;
@@ -634,7 +635,7 @@ blockEmojiEl.addEventListener('change', () => autoSave());
 cloudToggleEl.addEventListener('change', () => autoSave());
 
 syncBtn.addEventListener('click', () => {
-  syncBtn.dataset.syncStartTime = Date.now();
+  syncBtn.dataset.syncStartTime = Temporal.Now.instant().epochMilliseconds;
   syncBtn.classList.add('syncing');
   triggerCloudSync(true);
 });
@@ -695,8 +696,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   isLoading = false;
   updateCloudInfo();
 
-  if (!items.lastSyncTime || Date.now() - items.lastSyncTime > SYNC_INTERVAL_MS) {
-    syncBtn.dataset.syncStartTime = Date.now();
+  if (!items.lastSyncTime || Temporal.Now.instant().epochMilliseconds - items.lastSyncTime > SYNC_INTERVAL_MS) {
+    syncBtn.dataset.syncStartTime = Temporal.Now.instant().epochMilliseconds;
     syncBtn.classList.add('syncing');
     triggerCloudSync();
   }
@@ -849,7 +850,7 @@ function highlightText(element, query) {
   while (walker.nextNode()) {
     const node = walker.currentNode;
     const text = node.textContent;
-    const regex = new RegExp(RegExp.escape(query), 'gi');
+    const regex = new RegExp(RegExp.escape(query), 'giv');
     for (const match of text.matchAll(regex)) {
       matches.push({ node, index: match.index, length: query.length });
     }
@@ -900,16 +901,12 @@ function applyHistoryFilter() {
   filteredHistory = filtered;
 
   historyNextIndex = 0;
-  historyList.innerHTML = '';
+  historyList.replaceChildren();
 
   if (filteredHistory.length === 0) {
-    historyList.innerHTML = `
-      <div class="history-item">
-          <div class="history-item-text" style="text-align: center; color: var(--text-muted); padding: 12px 0;">
-              暂无记录
-          </div>
-      </div>
-    `;
+    historyList.replaceChildren(el('div', { className: 'history-item' }, [
+      el('div', { className: 'history-item-text', style: 'text-align: center; color: var(--text-muted); padding: 12px 0;', textContent: '暂无记录' })
+    ]));
     return;
   }
 
@@ -1008,13 +1005,9 @@ function renderHistoryPage() {
 
       historyNextIndex = Math.max(0, historyNextIndex - 1);
       if (filteredHistory.length === 0) {
-        historyList.innerHTML = `
-            <div class="history-item">
-                <div class="history-item-text" style="text-align: center; color: var(--text-muted); padding: 12px 0;">
-                    暂无记录
-                </div>
-            </div>
-        `;
+        historyList.replaceChildren(el('div', { className: 'history-item' }, [
+          el('div', { className: 'history-item-text', style: 'text-align: center; color: var(--text-muted); padding: 12px 0;', textContent: '暂无记录' })
+        ]));
       } else if (historyList.querySelectorAll('.history-item').length === 0) {
         renderHistoryPage();
       }
@@ -1126,10 +1119,9 @@ function renderHistoryPage() {
   }
   historyList.appendChild(fragment);
 
-  const overflowingSpans = Iterator.from(historyList.querySelectorAll('.history-display-name'))
+  Iterator.from(historyList.querySelectorAll('.history-display-name'))
     .filter((span) => span.scrollWidth > span.clientWidth)
-    .toArray();
-  overflowingSpans.forEach((span) => span.classList.add('is-overflowing'));
+    .forEach((span) => span.classList.add('is-overflowing'));
 
   historyNextIndex = end;
   isHistoryLoading = false;
@@ -1143,13 +1135,9 @@ historyList.addEventListener('scroll', () => {
 
 viewHistoryBtn.addEventListener('click', async () => {
   historyModal.classList.add('open');
-  historyList.innerHTML = `
-        <div class="history-item">
-            <div class="history-item-text" style="text-align: center; color: var(--text-muted); padding: 12px 0;">
-                加载中...
-            </div>
-        </div>
-    `;
+  historyList.replaceChildren(el('div', { className: 'history-item' }, [
+    el('div', { className: 'history-item-text', style: 'text-align: center; color: var(--text-muted); padding: 12px 0;', textContent: '加载中...' })
+  ]));
 
   const items = await chrome.storage.local.get(
     getStorageDefaults('blockedHistory', 'blockedUsersOnX', 'historyFilterReason'),
