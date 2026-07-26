@@ -17,16 +17,16 @@ class AsyncQueue {
     this.isProcessing = false;
   }
   enqueue(task) {
-    return new Promise((resolve, reject) => {
-      this.queue.push(async () => {
-        try {
-          resolve(await task());
-        } catch (error) {
-          reject(error);
-        }
-      });
-      this.process();
+    const { promise, resolve, reject } = Promise.withResolvers();
+    this.queue.push(async () => {
+      try {
+        resolve(await task());
+      } catch (error) {
+        reject(error);
+      }
     });
+    this.process();
+    return promise;
   }
   async process() {
     if (this.isProcessing) return;
