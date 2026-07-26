@@ -794,9 +794,9 @@ if (filterHistoryBtn && filterDropdown) {
     if (option) {
       const reason = option.dataset.reason;
       if (reason !== currentFilterReason) {
-        filterDropdown
-          .querySelectorAll('.filter-option')
-          .forEach((opt) => { opt.classList.remove('active'); });
+        filterDropdown.querySelectorAll('.filter-option').forEach((opt) => {
+          opt.classList.remove('active');
+        });
         option.classList.add('active');
 
         currentFilterReason = reason;
@@ -1138,7 +1138,9 @@ function renderHistoryPage() {
 
   Iterator.from(historyList.querySelectorAll('.history-display-name'))
     .filter((span) => span.scrollWidth > span.clientWidth)
-    .forEach((span) => { span.classList.add('is-overflowing'); });
+    .forEach((span) => {
+      span.classList.add('is-overflowing');
+    });
 
   historyNextIndex = end;
   isHistoryLoading = false;
