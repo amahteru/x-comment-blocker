@@ -693,7 +693,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   autoBlockKeywords = items.autoBlockKeywords || [];
 
   // Clean up autoBlockKeywords (remove words that are no longer in either list)
-  const allValidKeywordsSet = new Set(userKeywords).union(new Set(parseKeywords(items.cloudKeywords || '')));
+  const allValidKeywordsSet = new Set(userKeywords).union(
+    new Set(parseKeywords(items.cloudKeywords || '')),
+  );
   const originalAutoBlockLength = autoBlockKeywords.length;
   autoBlockKeywords = Array.from(new Set(autoBlockKeywords).intersection(allValidKeywordsSet));
   if (originalAutoBlockLength !== autoBlockKeywords.length) {
