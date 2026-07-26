@@ -78,7 +78,7 @@ async function mergeKeywords() {
 
       const regexes = [];
       if (plainKeywords.length > 0) {
-        const escaped = plainKeywords.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const escaped = plainKeywords.map(RegExp.escape);
         escaped.sort((a, b) => b.length - a.length);
         const CHUNK_SIZE = 400;
         for (let i = 0; i < escaped.length; i += CHUNK_SIZE) {

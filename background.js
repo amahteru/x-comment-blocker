@@ -18,12 +18,8 @@ class AsyncQueue {
   }
   enqueue(task) {
     const { promise, resolve, reject } = Promise.withResolvers();
-    this.queue.push(async () => {
-      try {
-        resolve(await task());
-      } catch (error) {
-        reject(error);
-      }
+    this.queue.push(() => {
+      Promise.try(task).then(resolve, reject);
     });
     this.process();
     return promise;
