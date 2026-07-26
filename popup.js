@@ -1,4 +1,11 @@
-import { parseKeywords, getStorageDefaults, SYNC_INTERVAL_MS, invisibleCharsRegex, extractCleanScreenName } from './utils.js';
+import {
+  extractCleanScreenName,
+  getStorageDefaults,
+  invisibleCharsRegex,
+  parseKeywords,
+  SYNC_INTERVAL_MS,
+} from './utils.js';
+
 let userKeywords = [];
 let autoBlockKeywords = [];
 let isLoading = true;
