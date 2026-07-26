@@ -15,7 +15,7 @@ const localSentIds = new Set();
 const tweetStateMap = new WeakMap();
 const emojiRegex = /\p{RGI_Emoji}/v;
 const spamCharsRegex =
-  /[\u02B0-\u02FF\u0F00-\u0FFF\u1D00-\u1D7F\u1D80-\u1DBF\u2070-\u209F\u2100-\u2BFF\uA980-\uA9DF\uAA00-\uAADF\u{13000}-\u{1342F}\u{1D400}-\u{1D7FF}]/u;
+  /[\u02B0-\u02FF\u0F00-\u0FFF\u1D00-\u1D7F\u1D80-\u1DBF\u2070-\u209F\u2100-\u2BFF\uA980-\uA9DF\uAA00-\uAADF\u{13000}-\u{1342F}\u{1D400}-\u{1D7FF}]/v;
 
 function isExtensionAlive() {
   return !!chrome.runtime?.id;
