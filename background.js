@@ -10,8 +10,12 @@ const ALARM_NAME = 'cloudKeywordSync';
 let isSyncing = false;
 
 class SyncLock {
-  constructor() { isSyncing = true; }
-  [Symbol.dispose]() { isSyncing = false; }
+  constructor() {
+    isSyncing = true;
+  }
+  [Symbol.dispose]() {
+    isSyncing = false;
+  }
 }
 
 async function getAuthHeaders() {
@@ -22,8 +26,13 @@ async function getAuthHeaders() {
 }
 
 class ProcessingLock {
-  constructor(obj) { this.obj = obj; this.obj.isProcessing = true; }
-  [Symbol.dispose]() { this.obj.isProcessing = false; }
+  constructor(obj) {
+    this.obj = obj;
+    this.obj.isProcessing = true;
+  }
+  [Symbol.dispose]() {
+    this.obj.isProcessing = false;
+  }
 }
 
 class AsyncQueue {
@@ -40,7 +49,7 @@ class AsyncQueue {
   async process() {
     if (this.isProcessing) return;
     using _lock = new ProcessingLock(this);
-    
+
     while (this.queue.length > 0) {
       const task = this.queue.shift();
       try {
@@ -66,7 +75,7 @@ storageQueue.enqueue(async () => {
 async function doSync() {
   if (isSyncing) return { success: false, reason: 'busy' };
   using _lock = new SyncLock();
-  
+
   const success = await syncCloudKeywords();
   return { success };
 }

@@ -168,7 +168,7 @@ addBtn.addEventListener('click', () => {
 function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
   if (userKeywords.length === 0) {
     keywordList.replaceChildren(
-      el('div', { className: 'empty-hint', textContent: '暂无自定义屏蔽词' })
+      el('div', { className: 'empty-hint', textContent: '暂无自定义屏蔽词' }),
     );
     document.querySelector('.keyword-stats').style.display = 'none';
     return;
@@ -453,7 +453,7 @@ async function renderCloudKeywords() {
       el('div', {
         className: 'empty-hint',
         textContent: currentCloudSearchQuery ? '没有找到匹配的屏蔽词' : '暂无云端屏蔽词',
-      })
+      }),
     );
     if (currentCloudSearchQuery) {
       cloudModalSubtitle.textContent = `(搜索到 ${cloudList.length} 个词)`;
@@ -816,11 +816,14 @@ function updateFilterOptions() {
     }
   });
 
-  const reasons = reasonsSet.values().toArray().toSorted((a, b) => {
-    if (a === '__blocked_on_x__') return -1;
-    if (b === '__blocked_on_x__') return 1;
-    return a.localeCompare(b);
-  });
+  const reasons = reasonsSet
+    .values()
+    .toArray()
+    .toSorted((a, b) => {
+      if (a === '__blocked_on_x__') return -1;
+      if (b === '__blocked_on_x__') return 1;
+      return a.localeCompare(b);
+    });
 
   if (currentFilterReason !== 'all' && !reasons.includes(currentFilterReason)) {
     currentFilterReason = 'all';
@@ -1192,7 +1195,7 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
   }
 
   whitelistCount.textContent = `(${whitelist.length})`;
-  
+
   const nodes = filteredWhitelist.map((handle) => {
     const index = whitelist.indexOf(handle);
     const itemEl = document.createElement('span');

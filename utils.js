@@ -45,7 +45,7 @@ export function getStorageDefaults(...keys) {
   return Object.fromEntries(
     Iterator.from(keys)
       .filter((key) => Object.hasOwn(STORAGE_DEFAULTS, key))
-      .map((key) => [key, Array.isArray(STORAGE_DEFAULTS[key]) ? [] : STORAGE_DEFAULTS[key]])
+      .map((key) => [key, Array.isArray(STORAGE_DEFAULTS[key]) ? [] : STORAGE_DEFAULTS[key]]),
   );
 }
 
