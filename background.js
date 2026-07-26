@@ -9,6 +9,11 @@ import {
 const ALARM_NAME = 'cloudKeywordSync';
 let isSyncing = false;
 
+class SyncLock {
+  constructor() { isSyncing = true; }
+  [Symbol.dispose]() { isSyncing = false; }
+}
+
 async function getAuthHeaders() {
   return {
     authorization:
@@ -16,11 +21,14 @@ async function getAuthHeaders() {
   };
 }
 
+class ProcessingLock {
+  constructor(obj) { this.obj = obj; this.obj.isProcessing = true; }
+  [Symbol.dispose]() { this.obj.isProcessing = false; }
+}
+
 class AsyncQueue {
-  constructor() {
-    this.queue = [];
-    this.isProcessing = false;
-  }
+  queue = [];
+  isProcessing = false;
   enqueue(task) {
     const { promise, resolve, reject } = Promise.withResolvers();
     this.queue.push(() => {
@@ -31,7 +39,8 @@ class AsyncQueue {
   }
   async process() {
     if (this.isProcessing) return;
-    this.isProcessing = true;
+    using _lock = new ProcessingLock(this);
+    
     while (this.queue.length > 0) {
       const task = this.queue.shift();
       try {
@@ -40,7 +49,6 @@ class AsyncQueue {
         console.error('[X-Blocker] Queue task error:', e);
       }
     }
-    this.isProcessing = false;
   }
 }
 
@@ -57,13 +65,10 @@ storageQueue.enqueue(async () => {
 
 async function doSync() {
   if (isSyncing) return { success: false, reason: 'busy' };
-  isSyncing = true;
-  try {
-    const success = await syncCloudKeywords();
-    return { success };
-  } finally {
-    isSyncing = false;
-  }
+  using _lock = new SyncLock();
+  
+  const success = await syncCloudKeywords();
+  return { success };
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -97,20 +102,18 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 class AutoBlockManager {
-  constructor() {
-    this.isProcessing = false;
-    this.dailyLimit = 150;
-    this.minDelayMs = 5000;
-    this.maxDelayMs = 10000;
+  isProcessing = false;
+  dailyLimit = 150;
+  minDelayMs = 5000;
+  maxDelayMs = 10000;
 
-    this.queue = [];
-    this.blockedUsersSet = new Set();
-    this.countToday = 0;
-    this.lastDate = '';
-    this.pausedUntil = 0;
-    this.initialized = false;
-    this.initPromise = null;
-  }
+  queue = [];
+  blockedUsersSet = new Set();
+  countToday = 0;
+  lastDate = '';
+  pausedUntil = 0;
+  initialized = false;
+  initPromise = null;
 
   async checkDailyReset() {
     const today = new Date().toDateString();
@@ -126,28 +129,26 @@ class AutoBlockManager {
 
   async init() {
     if (this.initialized) return;
-    if (!this.initPromise) {
-      this.initPromise = (async () => {
-        const defaults = getStorageDefaults(
-          'autoBlockQueue',
-          'autoBlockToday',
-          'autoBlockLastDate',
-          'autoBlockPausedUntil',
-          'blockedUsersOnX',
-        );
-        const items = await chrome.storage.local.get(defaults);
+    this.initPromise ??= (async () => {
+      const defaults = getStorageDefaults(
+        'autoBlockQueue',
+        'autoBlockToday',
+        'autoBlockLastDate',
+        'autoBlockPausedUntil',
+        'blockedUsersOnX',
+      );
+      const items = await chrome.storage.local.get(defaults);
 
-        this.queue = items.autoBlockQueue ?? [];
-        this.countToday = items.autoBlockToday ?? 0;
-        this.lastDate = items.autoBlockLastDate ?? '';
-        this.pausedUntil = items.autoBlockPausedUntil ?? 0;
-        this.blockedUsersSet = new Set(items.blockedUsersOnX ?? []);
+      this.queue = items.autoBlockQueue ?? [];
+      this.countToday = items.autoBlockToday ?? 0;
+      this.lastDate = items.autoBlockLastDate ?? '';
+      this.pausedUntil = items.autoBlockPausedUntil ?? 0;
+      this.blockedUsersSet = new Set(items.blockedUsersOnX ?? []);
 
-        await this.checkDailyReset();
+      await this.checkDailyReset();
 
-        this.initialized = true;
-      })();
-    }
+      this.initialized = true;
+    })();
     await this.initPromise;
   }
 
@@ -176,7 +177,7 @@ class AutoBlockManager {
 
   async process() {
     if (this.isProcessing) return;
-    this.isProcessing = true;
+    using _lock = new ProcessingLock(this);
 
     try {
       await this.init();
@@ -198,7 +199,7 @@ class AutoBlockManager {
 
         if (this.queue.length === 0) break;
 
-        const currentItem = this.queue[0];
+        const currentItem = this.queue.at(0);
 
         try {
           const res = await handleBlockUser(currentItem, true);
@@ -207,11 +208,11 @@ class AutoBlockManager {
             this.countToday++;
             this.blockedUsersSet.add(currentItem);
 
-            let blockedUsersArray = this.blockedUsersSet.values().toArray();
-            if (blockedUsersArray.length > 5000) {
-              blockedUsersArray = blockedUsersArray.slice(-5000);
-              this.blockedUsersSet = new Set(blockedUsersArray);
+            if (this.blockedUsersSet.size > 5000) {
+              const dropCount = this.blockedUsersSet.size - 5000;
+              this.blockedUsersSet = new Set(this.blockedUsersSet.values().drop(dropCount));
             }
+            const blockedUsersArray = this.blockedUsersSet.values().toArray();
 
             await this.saveState({
               autoBlockQueue: this.queue,
@@ -247,8 +248,8 @@ class AutoBlockManager {
           await new Promise((r) => setTimeout(r, delay));
         }
       }
-    } finally {
-      this.isProcessing = false;
+    } catch (e) {
+      console.error('[X-Blocker] AutoBlockManager process error:', e);
     }
   }
 }

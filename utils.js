@@ -7,8 +7,8 @@ export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
 export function extractCleanScreenName(input) {
   if (!input) return '';
   const cleaned = input.replace(invisibleCharsRegex, '').trim();
-  const match = cleaned.match(/(?:^|\/|@)([a-zA-Z0-9_]{1,15})(?:\/|\?|$)/);
-  if (match) return match[1].toLowerCase();
+  const match = cleaned.match(/(?:^|\/|@)(?<handle>[a-zA-Z0-9_]{1,15})(?:\/|\?|$)/);
+  if (match) return match.groups.handle.toLowerCase();
   return cleaned
     .replace(/^[@/]+/, '')
     .split(/[/?]/)[0]
@@ -42,14 +42,11 @@ const STORAGE_DEFAULTS = {
 };
 
 export function getStorageDefaults(...keys) {
-  const defaults = {};
-  for (const key of keys) {
-    if (Object.hasOwn(STORAGE_DEFAULTS, key)) {
-      const val = STORAGE_DEFAULTS[key];
-      defaults[key] = Array.isArray(val) ? [] : val;
-    }
-  }
-  return defaults;
+  return Object.fromEntries(
+    Iterator.from(keys)
+      .filter((key) => Object.hasOwn(STORAGE_DEFAULTS, key))
+      .map((key) => [key, Array.isArray(STORAGE_DEFAULTS[key]) ? [] : STORAGE_DEFAULTS[key]])
+  );
 }
 
 export function parseKeywords(text) {
@@ -71,8 +68,6 @@ export async function syncCloudKeywords() {
   const { cloudEnabled } = await chrome.storage.local.get(getStorageDefaults('cloudEnabled'));
   if (!cloudEnabled) return false;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
   try {
     const headers = { Accept: 'application/vnd.github.v3.raw' };
     const { cloudETag } = await chrome.storage.local.get(getStorageDefaults('cloudETag'));
@@ -83,7 +78,7 @@ export async function syncCloudKeywords() {
     const resp = await fetch(CLOUD_KEYWORDS_URL, {
       headers,
       cache: 'no-store',
-      signal: controller.signal,
+      signal: AbortSignal.timeout(15000),
     });
 
     if (resp.status === 304) {
@@ -144,7 +139,7 @@ export async function syncCloudKeywords() {
     });
     return true;
   } catch (e) {
-    const isTimeout = Error.isError(e) && e.name === 'AbortError';
+    const isTimeout = Error.isError(e) && (e.name === 'TimeoutError' || e.name === 'AbortError');
     await chrome.storage.local
       .set({
         syncStatus: 'error',
@@ -152,7 +147,5 @@ export async function syncCloudKeywords() {
       })
       .catch(() => {});
     return false;
-  } finally {
-    clearTimeout(timeoutId);
   }
 }

@@ -123,9 +123,7 @@ function el(tag, props, children) {
   const element = document.createElement(tag);
   Object.assign(element, props);
   if (children) {
-    children.forEach((c) =>
-      element.appendChild(typeof c === 'string' ? document.createTextNode(c) : c),
-    );
+    element.append(...children);
   }
   return element;
 }
@@ -168,11 +166,9 @@ addBtn.addEventListener('click', () => {
 });
 
 function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
-  keywordList.innerHTML = '';
-
   if (userKeywords.length === 0) {
-    keywordList.appendChild(
-      el('div', { className: 'empty-hint', textContent: '暂无自定义屏蔽词' }),
+    keywordList.replaceChildren(
+      el('div', { className: 'empty-hint', textContent: '暂无自定义屏蔽词' })
     );
     document.querySelector('.keyword-stats').style.display = 'none';
     return;
@@ -180,9 +176,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
 
   document.querySelector('.keyword-stats').style.display = 'flex';
 
-  const fragment = document.createDocumentFragment();
-
-  userKeywords.forEach((kw, index) => {
+  const tags = userKeywords.map((kw, index) => {
     const editBtn = el('button', {
       className: 'tag-btn tag-btn-edit',
       innerHTML: ICON_EDIT,
@@ -243,10 +237,10 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
     if (!isEditingAutoBlock) {
       editBtn.onclick = () => startEdit(tag, index);
     }
-    fragment.appendChild(tag);
+    return tag;
   });
 
-  keywordList.appendChild(fragment);
+  keywordList.replaceChildren(...tags);
   keywordCount.textContent = `共 ${userKeywords.length} 个自定义词`;
   autoBlockCount.textContent = autoBlockKeywords.length;
 }
@@ -280,9 +274,7 @@ function startEdit(tagEl, index) {
     onclick: () => renderUserKeywords(-1, index),
   });
 
-  tagEl.appendChild(input);
-  tagEl.appendChild(confirmBtn);
-  tagEl.appendChild(cancelBtn);
+  tagEl.append(input, confirmBtn, cancelBtn);
 
   input.focus();
   input.select();
@@ -292,7 +284,7 @@ function confirmEdit(inputEl, index) {
   const inputKws = parseKeywords(inputEl.value);
   let changed = false;
   if (inputKws.length > 0) {
-    const newVal = inputKws[0];
+    const newVal = inputKws.at(0);
     const existingIndex = userKeywords.indexOf(newVal);
     if (existingIndex === -1 || existingIndex === index) {
       if (userKeywords[index] !== newVal) {
@@ -317,7 +309,7 @@ function addKeyword() {
   newKeywordInput.focus();
 
   if (newKws.length === 0) {
-    showStatus(isKeywordRegex(inputKws[0]) ? '该正则已存在' : '该屏蔽词已存在');
+    showStatus(isKeywordRegex(inputKws.at(0)) ? '该正则已存在' : '该屏蔽词已存在');
     return;
   }
 
@@ -456,14 +448,12 @@ async function renderCloudKeywords() {
     cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
   }
 
-  cloudKeywordList.innerHTML = '';
-
   if (cloudList.length === 0) {
-    cloudKeywordList.appendChild(
+    cloudKeywordList.replaceChildren(
       el('div', {
         className: 'empty-hint',
         textContent: currentCloudSearchQuery ? '没有找到匹配的屏蔽词' : '暂无云端屏蔽词',
-      }),
+      })
     );
     if (currentCloudSearchQuery) {
       cloudModalSubtitle.textContent = `(搜索到 ${cloudList.length} 个词)`;
@@ -476,9 +466,7 @@ async function renderCloudKeywords() {
   cloudModalSubtitle.textContent = currentCloudSearchQuery
     ? `(搜索到 ${cloudList.length} 个词)`
     : `(共 ${cloudList.length} 个词)`;
-  const fragment = document.createDocumentFragment();
-
-  cloudList.forEach((kw) => {
+  const tags = cloudList.map((kw) => {
     const isRegex = isKeywordRegex(kw);
     const textSpan = el('span', { className: 'tag-text', textContent: kw, title: kw });
 
@@ -520,7 +508,7 @@ async function renderCloudKeywords() {
       tagChildren = [textSpan, banBtn];
     }
 
-    const tag = el(
+    return el(
       'span',
       {
         className: `keyword-tag${isRegex ? ' regex-tag' : ''}${isDisabled ? ' is-disabled' : ''}${isAutoBlock && !isEditingCloudAutoBlock ? ' is-autoblock' : ''}`,
@@ -528,10 +516,9 @@ async function renderCloudKeywords() {
       },
       tagChildren,
     );
-    fragment.appendChild(tag);
   });
 
-  cloudKeywordList.appendChild(fragment);
+  cloudKeywordList.replaceChildren(...tags);
 
   const savedScroll = localStorage.getItem('cloudScrollTop');
   if (!currentCloudSearchQuery && savedScroll) {
@@ -829,10 +816,7 @@ function updateFilterOptions() {
     }
   });
 
-  const reasons = reasonsSet.values().toArray();
-  // Sort so that '__blocked_on_x__' is always at a predictable position if desired, or just leave it at the end
-  // Sort alphabetically but put __blocked_on_x__ at the top
-  reasons.sort((a, b) => {
+  const reasons = reasonsSet.values().toArray().toSorted((a, b) => {
     if (a === '__blocked_on_x__') return -1;
     if (b === '__blocked_on_x__') return 1;
     return a.localeCompare(b);
@@ -842,21 +826,20 @@ function updateFilterOptions() {
     currentFilterReason = 'all';
   }
 
-  filterDropdown.innerHTML = '';
-
   const allOption = document.createElement('div');
   allOption.className = `filter-option ${currentFilterReason === 'all' ? 'active' : ''}`;
   allOption.dataset.reason = 'all';
   allOption.textContent = '全部原因';
-  filterDropdown.appendChild(allOption);
 
-  reasons.forEach((reason) => {
+  const optionNodes = reasons.map((reason) => {
     const opt = document.createElement('div');
     opt.className = `filter-option ${currentFilterReason === reason ? 'active' : ''}`;
     opt.dataset.reason = reason;
     opt.textContent = reason === '__blocked_on_x__' ? '已拉黑' : reason;
-    filterDropdown.appendChild(opt);
+    return opt;
   });
+
+  filterDropdown.replaceChildren(allOption, ...optionNodes);
 }
 
 function highlightText(element, query) {
@@ -972,8 +955,7 @@ function renderHistoryPage() {
         handleSpan.textContent = `@${handle}`;
         highlightText(handleSpan, currentSearchQuery);
 
-        userInfo.appendChild(nameSpan);
-        userInfo.appendChild(handleSpan);
+        userInfo.append(nameSpan, handleSpan);
       } else {
         const userSpan = document.createElement('span');
         userSpan.className = 'history-handle';
@@ -1127,8 +1109,7 @@ function renderHistoryPage() {
       actionsDiv.appendChild(blockBtn);
     }
 
-    header.appendChild(userInfo);
-    header.appendChild(actionsDiv);
+    header.append(userInfo, actionsDiv);
 
     let displayText = item.text || '[无内容或已隐藏]';
     if (item.reason) {
@@ -1140,8 +1121,7 @@ function renderHistoryPage() {
     textDiv.textContent = displayText;
     highlightText(textDiv, currentSearchQuery);
 
-    div.appendChild(header);
-    div.appendChild(textDiv);
+    div.append(header, textDiv);
     fragment.appendChild(div);
   }
   historyList.appendChild(fragment);
@@ -1198,24 +1178,22 @@ closeHistoryBtn.addEventListener('click', () => {
 });
 
 function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
-  whitelistList.innerHTML = '';
-
   const filteredWhitelist = whitelist.filter((handle) =>
     handle.toLowerCase().includes(currentWhitelistSearchQuery),
   );
 
   if (filteredWhitelist.length === 0) {
-    if (whitelist.length === 0) {
-      whitelistList.innerHTML = '<div class="empty-hint">暂无白名单用户</div>';
-    } else {
-      whitelistList.innerHTML = '<div class="empty-hint">未找到匹配的白名单用户</div>';
-    }
+    const hint = document.createElement('div');
+    hint.className = 'empty-hint';
+    hint.textContent = whitelist.length === 0 ? '暂无白名单用户' : '未找到匹配的白名单用户';
+    whitelistList.replaceChildren(hint);
     whitelistCount.textContent = `(${whitelist.length})`;
     return;
   }
 
   whitelistCount.textContent = `(${whitelist.length})`;
-  filteredWhitelist.forEach((handle) => {
+  
+  const nodes = filteredWhitelist.map((handle) => {
     const index = whitelist.indexOf(handle);
     const itemEl = document.createElement('span');
     itemEl.className =
@@ -1247,11 +1225,11 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
       }, 200);
     };
 
-    itemEl.appendChild(textSpan);
-    itemEl.appendChild(editBtn);
-    itemEl.appendChild(delBtn);
-    whitelistList.appendChild(itemEl);
+    itemEl.append(textSpan, editBtn, delBtn);
+    return itemEl;
   });
+
+  whitelistList.replaceChildren(...nodes);
 }
 
 function startEditWhitelist(tagEl, oldHandle) {
@@ -1282,9 +1260,7 @@ function startEditWhitelist(tagEl, oldHandle) {
   cancelBtn.title = '取消';
   cancelBtn.onclick = () => renderWhitelist();
 
-  tagEl.appendChild(input);
-  tagEl.appendChild(confirmBtn);
-  tagEl.appendChild(cancelBtn);
+  tagEl.append(input, confirmBtn, cancelBtn);
 
   input.focus();
   input.select();
