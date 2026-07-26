@@ -67,9 +67,9 @@ const storageQueue = new AsyncQueue();
 storageQueue.enqueue(async () => {
   const items = await chrome.storage.local.get(getStorageDefaults('blockedHistory'));
   const history = items.blockedHistory ?? [];
-  for (const item of history) {
-    if (item.id) globalSpamCache.add(item.id);
-  }
+  Iterator.from(history)
+    .filter((item) => item.id)
+    .forEach((item) => globalSpamCache.add(item.id));
 });
 
 async function doSync() {
@@ -169,16 +169,13 @@ class AutoBlockManager {
     await this.init();
     if (!screenNames || screenNames.length === 0) return;
 
-    let changed = false;
-    for (const screenName of screenNames) {
-      const cleanName = extractCleanScreenName(screenName);
-      if (cleanName && !this.queue.includes(cleanName) && !this.blockedUsersSet.has(cleanName)) {
-        this.queue.push(cleanName);
-        changed = true;
-      }
-    }
+    const validNames = Iterator.from(screenNames)
+      .map(extractCleanScreenName)
+      .filter((name) => name && !this.queue.includes(name) && !this.blockedUsersSet.has(name))
+      .toArray();
 
-    if (changed) {
+    if (validNames.length > 0) {
+      this.queue.push(...validNames);
       await this.saveState({ autoBlockQueue: this.queue });
       this.process();
     }
@@ -339,11 +336,16 @@ function handleRecordSpam(items) {
   if (!items || items.length === 0) return;
 
   storageQueue.enqueue(async () => {
-    const newSpams = [];
-    for (const item of items) {
-      if (!globalSpamCache.has(item.id)) {
+    const newSpams = Iterator.from(items)
+      .filter((item) => !globalSpamCache.has(item.id))
+      .map((item) => {
         globalSpamCache.add(item.id);
-        newSpams.push({
+        if (globalSpamCache.size > 5000) {
+          for (const val of globalSpamCache.values().take(1000)) {
+            globalSpamCache.delete(val);
+          }
+        }
+        return {
           id: item.id,
           text: item.text,
           user: item.user,
@@ -351,14 +353,9 @@ function handleRecordSpam(items) {
           reason: item.reason,
           time: item.time,
           isAutoBlock: item.isAutoBlock,
-        });
-        if (globalSpamCache.size > 5000) {
-          for (const val of globalSpamCache.values().take(1000)) {
-            globalSpamCache.delete(val);
-          }
-        }
-      }
-    }
+        };
+      })
+      .toArray();
 
     if (newSpams.length === 0) return;
 
