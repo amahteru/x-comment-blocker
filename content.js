@@ -288,7 +288,12 @@
 
   function getTweetStatusInfo(tweet, pageStatusId) {
     const timeMatch = Iterator.from(tweet.querySelectorAll('time'))
-      .map((timeEl) => timeEl.closest('a')?.getAttribute('href')?.match(/\/status\/(\d+)/iv))
+      .map((timeEl) =>
+        timeEl
+          .closest('a')
+          ?.getAttribute('href')
+          ?.match(/\/status\/(\d+)/iv),
+      )
       .find((m) => m);
 
     if (timeMatch) {
