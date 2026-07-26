@@ -858,25 +858,25 @@ function highlightText(element, query) {
       matches.push({ node, index: match.index, length: query.length });
     }
   }
-  for (let i = matches.length - 1; i >= 0; i--) {
-    const { node, index, length } = matches[i];
+  matches.toReversed().forEach(({ node, index, length }) => {
     const after = node.splitText(index);
     after.splitText(length);
     const mark = document.createElement('mark');
     mark.className = 'search-highlight';
     mark.textContent = after.textContent;
     after.parentNode.replaceChild(mark, after);
-  }
+  });
 }
 
 function applyHistoryFilter() {
   let filtered = currentHistory;
+  const blockedUsersSet = new Set(currentBlockedUsersOnX);
 
   if (currentFilterReason !== 'all') {
     if (currentFilterReason === '__blocked_on_x__') {
       filtered = filtered.filter((item) => {
         const screenName = extractCleanScreenName(item.user);
-        return currentBlockedUsersOnX.includes(screenName);
+        return blockedUsersSet.has(screenName);
       });
     } else {
       filtered = filtered.filter((item) => item.reason === currentFilterReason);
@@ -1130,8 +1130,9 @@ function renderHistoryPage() {
   }
   historyList.appendChild(fragment);
 
-  const nameSpans = historyList.querySelectorAll('.history-display-name').values().toArray();
-  const overflowingSpans = nameSpans.filter((span) => span.scrollWidth > span.clientWidth);
+  const overflowingSpans = Iterator.from(historyList.querySelectorAll('.history-display-name'))
+    .filter((span) => span.scrollWidth > span.clientWidth)
+    .toArray();
   overflowingSpans.forEach((span) => span.classList.add('is-overflowing'));
 
   historyNextIndex = end;
@@ -1157,8 +1158,8 @@ viewHistoryBtn.addEventListener('click', async () => {
   const items = await chrome.storage.local.get(
     getStorageDefaults('blockedHistory', 'blockedUsersOnX', 'historyFilterReason'),
   );
-  currentHistory = items.blockedHistory || [];
-  currentBlockedUsersOnX = items.blockedUsersOnX || [];
+  currentHistory = items.blockedHistory ?? [];
+  currentBlockedUsersOnX = items.blockedUsersOnX ?? [];
 
   const oldReason = items.historyFilterReason || 'all';
   currentFilterReason = oldReason;
@@ -1296,7 +1297,7 @@ async function confirmEditWhitelist(inputEl, oldHandle) {
 
 openWhitelistBtn.addEventListener('click', async () => {
   const items = await chrome.storage.local.get(getStorageDefaults('whitelist'));
-  whitelist = items.whitelist || [];
+  whitelist = items.whitelist ?? [];
   renderWhitelist();
   whitelistModal.classList.add('open');
 });
@@ -1341,7 +1342,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     blockedCountEl.textContent = changes.blockedCount.newValue || 0;
   }
   if (changes.blockedUsersOnX) {
-    currentBlockedUsersOnX = changes.blockedUsersOnX.newValue || [];
+    currentBlockedUsersOnX = changes.blockedUsersOnX.newValue ?? [];
     document.querySelectorAll('button.btn-block-x').forEach((btn) => {
       const screenName = btn.dataset.screenName;
       const isBlocked = currentBlockedUsersOnX.includes(screenName);

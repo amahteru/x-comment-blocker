@@ -51,14 +51,16 @@ export function getStorageDefaults(...keys) {
 
 export function parseKeywords(text) {
   if (!text) return [];
-  return text.split('\n').flatMap((k) => {
-    const trimmed = k.replaceAll(invisibleCharsRegex, '').trim();
-    if (!trimmed) return [];
-    if (trimmed.length >= 3 && trimmed.startsWith('/') && /\/[a-zA-Z]*$/.test(trimmed)) {
-      return [trimmed];
-    }
-    return [trimmed.toLowerCase()];
-  });
+  return Iterator.from(text.split('\n'))
+    .map((k) => k.replaceAll(invisibleCharsRegex, '').trim())
+    .filter((k) => k)
+    .map((k) => {
+      if (k.length >= 3 && k.startsWith('/') && /\/[a-zA-Z]*$/.test(k)) {
+        return k;
+      }
+      return k.toLowerCase();
+    })
+    .toArray();
 }
 
 export async function syncCloudKeywords() {
@@ -102,7 +104,7 @@ export async function syncCloudKeywords() {
     }
 
     const text = await resp.text();
-    const newETag = resp.headers.get('ETag') || '';
+    const newETag = resp.headers.get('ETag') ?? '';
 
     const cloudList = parseKeywords(text);
 
@@ -110,8 +112,8 @@ export async function syncCloudKeywords() {
     const storageItems = await chrome.storage.local.get(
       getStorageDefaults('disabledCloudKeywords', 'autoBlockKeywords', 'keywords'),
     );
-    const disabledCloudKeywords = storageItems.disabledCloudKeywords || [];
-    const autoBlockKeywords = storageItems.autoBlockKeywords || [];
+    const disabledCloudKeywords = storageItems.disabledCloudKeywords ?? [];
+    const autoBlockKeywords = storageItems.autoBlockKeywords ?? [];
     const userKws = parseKeywords(storageItems.keywords);
 
     const cloudListSet = new Set(cloudList);
