@@ -396,7 +396,11 @@ function formatHistoryTime(timestamp) {
   const isThisYear = date.getFullYear() === now.getFullYear();
 
   if (isToday) {
-    return new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
+    return new Intl.DateTimeFormat('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date);
   } else if (isThisYear) {
     return `${date.getMonth() + 1}月${date.getDate()}日`;
   } else {

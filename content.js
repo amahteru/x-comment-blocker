@@ -495,14 +495,14 @@
       let displayName = '';
 
       if (shouldCheck) {
-        ({
-          isSpam,
-          isAutoBlock,
-          blockReason,
-          userName,
-          stableHandle,
-          displayName,
-        } = detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage, isMainTweet));
+        ({ isSpam, isAutoBlock, blockReason, userName, stableHandle, displayName } = detectSpam(
+          textNode,
+          userNode,
+          rawTweetText,
+          rawUserName,
+          isStatusPage,
+          isMainTweet,
+        ));
       }
 
       state.isSpam = isSpam;
