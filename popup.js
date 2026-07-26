@@ -429,7 +429,9 @@ function relativeTime(ts) {
 }
 
 async function updateCloudInfo() {
-  const items = await chrome.storage.local.get(getStorageDefaults('cloudKeywords', 'lastSyncTime', 'syncStatus', 'syncError'));
+  const items = await chrome.storage.local.get(
+    getStorageDefaults('cloudKeywords', 'lastSyncTime', 'syncStatus', 'syncError'),
+  );
   const cloudList = parseKeywords(items.cloudKeywords);
   const countText = cloudList.length > 0 ? `${cloudList.length} 个词` : '';
 
@@ -447,99 +449,101 @@ async function updateCloudInfo() {
 }
 
 async function renderCloudKeywords() {
-  const items = await chrome.storage.local.get(getStorageDefaults('cloudKeywords', 'disabledCloudKeywords'));
+  const items = await chrome.storage.local.get(
+    getStorageDefaults('cloudKeywords', 'disabledCloudKeywords'),
+  );
   let cloudList = parseKeywords(items.cloudKeywords);
   let disabledList = items.disabledCloudKeywords || [];
 
-      if (currentCloudSearchQuery !== '') {
-        cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
-      }
+  if (currentCloudSearchQuery !== '') {
+    cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
+  }
 
-      cloudKeywordList.innerHTML = '';
+  cloudKeywordList.innerHTML = '';
 
-      if (cloudList.length === 0) {
-        cloudKeywordList.appendChild(
-          el('div', {
-            className: 'empty-hint',
-            textContent: currentCloudSearchQuery ? '没有找到匹配的屏蔽词' : '暂无云端屏蔽词',
-          }),
-        );
-        if (currentCloudSearchQuery) {
-          cloudModalSubtitle.textContent = `(搜索到 ${cloudList.length} 个词)`;
-        } else {
-          cloudModalSubtitle.textContent = '';
-        }
-        return;
-      }
+  if (cloudList.length === 0) {
+    cloudKeywordList.appendChild(
+      el('div', {
+        className: 'empty-hint',
+        textContent: currentCloudSearchQuery ? '没有找到匹配的屏蔽词' : '暂无云端屏蔽词',
+      }),
+    );
+    if (currentCloudSearchQuery) {
+      cloudModalSubtitle.textContent = `(搜索到 ${cloudList.length} 个词)`;
+    } else {
+      cloudModalSubtitle.textContent = '';
+    }
+    return;
+  }
 
-      cloudModalSubtitle.textContent = currentCloudSearchQuery
-        ? `(搜索到 ${cloudList.length} 个词)`
-        : `(共 ${cloudList.length} 个词)`;
-      const fragment = document.createDocumentFragment();
+  cloudModalSubtitle.textContent = currentCloudSearchQuery
+    ? `(搜索到 ${cloudList.length} 个词)`
+    : `(共 ${cloudList.length} 个词)`;
+  const fragment = document.createDocumentFragment();
 
-      cloudList.forEach((kw) => {
-        const isRegex = isKeywordRegex(kw);
-        const textSpan = el('span', { className: 'tag-text', textContent: kw, title: kw });
+  cloudList.forEach((kw) => {
+    const isRegex = isKeywordRegex(kw);
+    const textSpan = el('span', { className: 'tag-text', textContent: kw, title: kw });
 
-        highlightText(textSpan, currentCloudSearchQuery);
+    highlightText(textSpan, currentCloudSearchQuery);
 
-        const isDisabled = disabledList.includes(kw);
-        const isAutoBlock = autoBlockKeywords.includes(kw);
+    const isDisabled = disabledList.includes(kw);
+    const isAutoBlock = autoBlockKeywords.includes(kw);
 
-        let tagChildren = [];
-        if (isEditingCloudAutoBlock) {
-          const checkbox = el('input', {
-            type: 'checkbox',
-            className: 'tag-checkbox',
-            checked: isAutoBlock,
-            onchange: (e) => {
-              if (e.target.checked) {
-                if (!autoBlockKeywords.includes(kw)) autoBlockKeywords.push(kw);
-              } else {
-                autoBlockKeywords = autoBlockKeywords.filter((k) => k !== kw);
-              }
-            },
-          });
-          tagChildren = [textSpan, checkbox];
-        } else {
-          const banBtn = el('button', {
-            className: 'tag-btn tag-btn-del',
-            innerHTML: ICON_BAN,
-            title: isDisabled ? '取消禁用' : '禁用',
-            onclick: async () => {
-              if (isDisabled) {
-                disabledList = disabledList.filter((k) => k !== kw);
-              } else {
-                disabledList.push(kw);
-              }
-              await chrome.storage.local.set({ disabledCloudKeywords: disabledList });
-              renderCloudKeywords();
-            },
-          });
-          tagChildren = [textSpan, banBtn];
-        }
-
-        const tag = el(
-          'span',
-          {
-            className:
-              'keyword-tag' +
-              (isRegex ? ' regex-tag' : '') +
-              (isDisabled ? ' is-disabled' : '') +
-              (isAutoBlock && !isEditingCloudAutoBlock ? ' is-autoblock' : ''),
-            style: 'width: calc(50% - 5px);',
-          },
-          tagChildren,
-        );
-        fragment.appendChild(tag);
+    let tagChildren = [];
+    if (isEditingCloudAutoBlock) {
+      const checkbox = el('input', {
+        type: 'checkbox',
+        className: 'tag-checkbox',
+        checked: isAutoBlock,
+        onchange: (e) => {
+          if (e.target.checked) {
+            if (!autoBlockKeywords.includes(kw)) autoBlockKeywords.push(kw);
+          } else {
+            autoBlockKeywords = autoBlockKeywords.filter((k) => k !== kw);
+          }
+        },
       });
+      tagChildren = [textSpan, checkbox];
+    } else {
+      const banBtn = el('button', {
+        className: 'tag-btn tag-btn-del',
+        innerHTML: ICON_BAN,
+        title: isDisabled ? '取消禁用' : '禁用',
+        onclick: async () => {
+          if (isDisabled) {
+            disabledList = disabledList.filter((k) => k !== kw);
+          } else {
+            disabledList.push(kw);
+          }
+          await chrome.storage.local.set({ disabledCloudKeywords: disabledList });
+          renderCloudKeywords();
+        },
+      });
+      tagChildren = [textSpan, banBtn];
+    }
 
-      cloudKeywordList.appendChild(fragment);
+    const tag = el(
+      'span',
+      {
+        className:
+          'keyword-tag' +
+          (isRegex ? ' regex-tag' : '') +
+          (isDisabled ? ' is-disabled' : '') +
+          (isAutoBlock && !isEditingCloudAutoBlock ? ' is-autoblock' : ''),
+        style: 'width: calc(50% - 5px);',
+      },
+      tagChildren,
+    );
+    fragment.appendChild(tag);
+  });
 
-      const savedScroll = localStorage.getItem('cloudScrollTop');
-      if (!currentCloudSearchQuery && savedScroll) {
-        cloudScrollContainer.scrollTop = Number(savedScroll);
-      }
+  cloudKeywordList.appendChild(fragment);
+
+  const savedScroll = localStorage.getItem('cloudScrollTop');
+  if (!currentCloudSearchQuery && savedScroll) {
+    cloudScrollContainer.scrollTop = Number(savedScroll);
+  }
 }
 
 if (toggleCloudSearchBtn && cloudSearchContainer && cloudSearchInput) {
