@@ -368,7 +368,10 @@ function handleRecordSpam(items) {
       getStorageDefaults('blockedCount', 'blockedHistory'),
     );
 
-    const autoBlockScreenNames = Iterator.from(newSpams).filter((s) => s.isAutoBlock).map((s) => s.user).toArray();
+    const autoBlockScreenNames = Iterator.from(newSpams)
+      .filter((s) => s.isAutoBlock)
+      .map((s) => s.user)
+      .toArray();
     if (autoBlockScreenNames.length > 0) {
       autoBlockManager.enqueueBatch(autoBlockScreenNames);
     }

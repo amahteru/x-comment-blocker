@@ -358,7 +358,12 @@ importFile.addEventListener('change', async (e) => {
     try {
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed)) {
-        newKeywords = parseKeywords(Iterator.from(parsed).map((k) => String(k)).toArray().join('\n'));
+        newKeywords = parseKeywords(
+          Iterator.from(parsed)
+            .map((k) => String(k))
+            .toArray()
+            .join('\n'),
+        );
       }
     } catch {
       newKeywords = parseKeywords(content);
@@ -385,7 +390,8 @@ importFile.addEventListener('change', async (e) => {
 });
 
 function formatHistoryTime(timestamp) {
-  const date = Temporal.Instant.fromEpochMilliseconds(timestamp).toZonedDateTimeISO('Asia/Shanghai');
+  const date =
+    Temporal.Instant.fromEpochMilliseconds(timestamp).toZonedDateTimeISO('Asia/Shanghai');
   const now = Temporal.Now.zonedDateTimeISO('Asia/Shanghai');
 
   if (date.toPlainDate().equals(now.toPlainDate())) {
