@@ -2,10 +2,10 @@
 const CLOUD_KEYWORDS_URL =
   'https://api.github.com/repos/ethanzhou-dev/x-comment-blocker/contents/keywords.txt';
 const SYNC_INTERVAL_MINUTES = 360;
-const _SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
+const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
 const invisibleCharsRegex = /[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g;
 
-function _extractCleanScreenName(input) {
+function extractCleanScreenName(input) {
   if (!input) return '';
   const cleaned = input.replace(invisibleCharsRegex, '').trim();
   const match = cleaned.match(/(?:^|\/|@)([a-zA-Z0-9_]{1,15})(?:\/|\?|$)/);
@@ -68,7 +68,7 @@ function parseKeywords(text) {
     .filter(Boolean);
 }
 
-async function _syncCloudKeywords() {
+async function syncCloudKeywords() {
   const { cloudEnabled } = await chrome.storage.local.get(getStorageDefaults('cloudEnabled'));
   if (!cloudEnabled) return false;
 
