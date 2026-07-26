@@ -192,7 +192,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
         const kwToRemove = kw;
         setTimeout(() => {
           const idx = userKeywords.indexOf(kwToRemove);
-          if (idx !== -1) userKeywords.splice(idx, 1);
+          if (idx !== -1) userKeywords = userKeywords.toSpliced(idx, 1);
           renderUserKeywords();
           autoSave();
         }, 200);
@@ -228,12 +228,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
     const tag = el(
       'span',
       {
-        className:
-          'keyword-tag' +
-          (isRegex ? ' regex-tag' : '') +
-          (isAutoBlock && !isEditingAutoBlock ? ' is-autoblock' : '') +
-          (index === animateIndex ? ' fade-in-tag' : '') +
-          (index === fadeIndex ? ' fade-in' : ''),
+        className: `keyword-tag${isRegex ? ' regex-tag' : ''}${isAutoBlock && !isEditingAutoBlock ? ' is-autoblock' : ''}${index === animateIndex ? ' fade-in-tag' : ''}${index === fadeIndex ? ' fade-in' : ''}`,
       },
       tagChildren,
     );
@@ -521,11 +516,7 @@ async function renderCloudKeywords() {
     const tag = el(
       'span',
       {
-        className:
-          'keyword-tag' +
-          (isRegex ? ' regex-tag' : '') +
-          (isDisabled ? ' is-disabled' : '') +
-          (isAutoBlock && !isEditingCloudAutoBlock ? ' is-autoblock' : ''),
+        className: `keyword-tag${isRegex ? ' regex-tag' : ''}${isDisabled ? ' is-disabled' : ''}${isAutoBlock && !isEditingCloudAutoBlock ? ' is-autoblock' : ''}`,
         style: 'width: calc(50% - 5px);',
       },
       tagChildren,
@@ -868,12 +859,9 @@ function highlightText(element, query) {
   while (walker.nextNode()) {
     const node = walker.currentNode;
     const text = node.textContent;
-    const lower = text.toLowerCase();
-    let start = 0;
-    let idx;
-    while ((idx = lower.indexOf(query, start)) !== -1) {
-      matches.push({ node, index: idx, length: query.length });
-      start = idx + query.length;
+    const regex = new RegExp(RegExp.escape(query), 'gi');
+    for (const match of text.matchAll(regex)) {
+      matches.push({ node, index: match.index, length: query.length });
     }
   }
   for (let i = matches.length - 1; i >= 0; i--) {
