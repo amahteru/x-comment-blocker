@@ -1225,8 +1225,9 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
   filteredWhitelist.forEach((handle) => {
     const index = whitelist.indexOf(handle);
     const itemEl = document.createElement('span');
-    itemEl.className = 'keyword-tag' + 
-      (index === animateIndex ? ' fade-in-tag' : '') + 
+    itemEl.className =
+      'keyword-tag' +
+      (index === animateIndex ? ' fade-in-tag' : '') +
       (index === fadeIndex ? ' fade-in' : '');
     const textSpan = document.createElement('span');
     textSpan.className = 'tag-text';
@@ -1247,7 +1248,7 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
       itemEl.classList.add('fade-out-tag');
       const hToRemove = handle;
       setTimeout(() => {
-        whitelist = whitelist.filter(h => h !== hToRemove);
+        whitelist = whitelist.filter((h) => h !== hToRemove);
         chrome.storage.local.set({ whitelist }, () => {
           renderWhitelist();
         });
