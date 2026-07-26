@@ -742,6 +742,12 @@ const toggleSearchBtn = document.getElementById('toggleSearchBtn');
 const historySearchContainer = document.getElementById('historySearchContainer');
 const historySearchInput = document.getElementById('historySearchInput');
 
+const toggleWhitelistSearchBtn = document.getElementById('toggleWhitelistSearchBtn');
+const whitelistSearchContainer = document.getElementById('whitelistSearchContainer');
+const whitelistSearchInput = document.getElementById('whitelistSearchInput');
+let currentWhitelistSearchQuery = '';
+let whitelistSearchDebounceTimer = null;
+
 if (toggleSearchBtn && historySearchContainer && historySearchInput) {
   toggleSearchBtn.addEventListener('click', () => {
     const isOpen = historySearchContainer.classList.toggle('open');
@@ -761,6 +767,28 @@ if (toggleSearchBtn && historySearchContainer && historySearchInput) {
     currentSearchQuery = e.target.value.toLowerCase();
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(() => applyHistoryFilter(), 200);
+  });
+}
+
+if (toggleWhitelistSearchBtn && whitelistSearchContainer && whitelistSearchInput) {
+  toggleWhitelistSearchBtn.addEventListener('click', () => {
+    const isOpen = whitelistSearchContainer.classList.toggle('open');
+    if (isOpen) {
+      whitelistSearchInput.focus();
+    } else {
+      clearTimeout(whitelistSearchDebounceTimer);
+      whitelistSearchInput.value = '';
+      if (currentWhitelistSearchQuery !== '') {
+        currentWhitelistSearchQuery = '';
+        renderWhitelist();
+      }
+    }
+  });
+
+  whitelistSearchInput.addEventListener('input', (e) => {
+    currentWhitelistSearchQuery = e.target.value.toLowerCase();
+    clearTimeout(whitelistSearchDebounceTimer);
+    whitelistSearchDebounceTimer = setTimeout(() => renderWhitelist(), 200);
   });
 }
 
@@ -1178,14 +1206,24 @@ closeHistoryBtn.addEventListener('click', () => {
 
 function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
   whitelistList.innerHTML = '';
-  if (whitelist.length === 0) {
-    whitelistList.innerHTML = '<div class="empty-hint">暂无白名单用户</div>';
-    whitelistCount.textContent = '(0)';
+  
+  const filteredWhitelist = whitelist.filter(handle => 
+    handle.toLowerCase().includes(currentWhitelistSearchQuery)
+  );
+
+  if (filteredWhitelist.length === 0) {
+    if (whitelist.length === 0) {
+      whitelistList.innerHTML = '<div class="empty-hint">暂无白名单用户</div>';
+    } else {
+      whitelistList.innerHTML = '<div class="empty-hint">未找到匹配的白名单用户</div>';
+    }
+    whitelistCount.textContent = `(${whitelist.length})`;
     return;
   }
 
   whitelistCount.textContent = `(${whitelist.length})`;
-  whitelist.forEach((handle, index) => {
+  filteredWhitelist.forEach((handle) => {
+    const index = whitelist.indexOf(handle);
     const itemEl = document.createElement('span');
     itemEl.className = 'keyword-tag' + 
       (index === animateIndex ? ' fade-in-tag' : '') + 
@@ -1293,6 +1331,12 @@ openWhitelistBtn.addEventListener('click', async () => {
 
 closeWhitelistBtn.addEventListener('click', () => {
   whitelistModal.classList.remove('open');
+  clearTimeout(whitelistSearchDebounceTimer);
+  if (whitelistSearchContainer && whitelistSearchContainer.classList.contains('open')) {
+    whitelistSearchContainer.classList.remove('open');
+    whitelistSearchInput.value = '';
+    currentWhitelistSearchQuery = '';
+  }
 });
 
 addWhitelistBtn.addEventListener('click', () => {
