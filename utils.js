@@ -51,17 +51,14 @@ export function getStorageDefaults(...keys) {
 
 export function parseKeywords(text) {
   if (!text) return [];
-  return text
-    .split('\n')
-    .map((k) => {
-      const trimmed = k.replace(invisibleCharsRegex, '').trim();
-      if (!trimmed) return '';
-      if (trimmed.length >= 3 && trimmed.startsWith('/') && /\/[a-zA-Z]*$/.test(trimmed)) {
-        return trimmed;
-      }
-      return trimmed.toLowerCase();
-    })
-    .filter(Boolean);
+  return text.split('\n').flatMap((k) => {
+    const trimmed = k.replace(invisibleCharsRegex, '').trim();
+    if (!trimmed) return [];
+    if (trimmed.length >= 3 && trimmed.startsWith('/') && /\/[a-zA-Z]*$/.test(trimmed)) {
+      return [trimmed];
+    }
+    return [trimmed.toLowerCase()];
+  });
 }
 
 export async function syncCloudKeywords() {

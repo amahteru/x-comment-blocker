@@ -347,13 +347,12 @@ importBtn.addEventListener('click', () => {
   importFile.click();
 });
 
-importFile.addEventListener('change', (e) => {
+importFile.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const content = ev.target.result;
+  try {
+    const content = await file.text();
     let newKeywords = [];
 
     try {
@@ -378,12 +377,11 @@ importFile.addEventListener('change', (e) => {
     } else {
       showStatus('文件内容无效');
     }
-  };
-  reader.onerror = () => {
+  } catch {
     showStatus('文件读取失败');
-  };
-  reader.readAsText(file);
-  importFile.value = '';
+  } finally {
+    importFile.value = '';
+  }
 });
 
 function formatHistoryTime(timestamp) {
@@ -398,9 +396,7 @@ function formatHistoryTime(timestamp) {
   const isThisYear = date.getFullYear() === now.getFullYear();
 
   if (isToday) {
-    const hh = String(date.getHours()).padStart(2, '0');
-    const mm = String(date.getMinutes()).padStart(2, '0');
-    return `${hh}:${mm}`;
+    return new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
   } else if (isThisYear) {
     return `${date.getMonth() + 1}月${date.getDate()}日`;
   } else {

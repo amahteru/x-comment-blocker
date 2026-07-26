@@ -442,7 +442,7 @@
 
       let logicalPageStatusId = pageContext.pageStatusId;
       if (pageContext.isPhotoVideoOverlay && tweet.closest('[role="dialog"]') === null) {
-        logicalPageStatusId = state.pageStatusId || pageContext.pageStatusId;
+        logicalPageStatusId = state.pageStatusId ?? pageContext.pageStatusId;
       } else {
         state.pageStatusId = pageContext.pageStatusId;
       }
@@ -495,20 +495,14 @@
       let displayName = '';
 
       if (shouldCheck) {
-        const result = detectSpam(
-          textNode,
-          userNode,
-          rawTweetText,
-          rawUserName,
-          isStatusPage,
-          isMainTweet,
-        );
-        isSpam = result.isSpam;
-        isAutoBlock = result.isAutoBlock;
-        blockReason = result.blockReason;
-        userName = result.userName;
-        stableHandle = result.stableHandle;
-        displayName = result.displayName;
+        ({
+          isSpam,
+          isAutoBlock,
+          blockReason,
+          userName,
+          stableHandle,
+          displayName,
+        } = detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage, isMainTweet));
       }
 
       state.isSpam = isSpam;
