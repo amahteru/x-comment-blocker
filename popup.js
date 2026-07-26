@@ -428,33 +428,28 @@ function relativeTime(ts) {
   return `${Math.floor(diff / 86400)}天前同步`;
 }
 
-function updateCloudInfo() {
-  chrome.storage.local
-    .get(getStorageDefaults('cloudKeywords', 'lastSyncTime', 'syncStatus', 'syncError'))
-    .then((items) => {
-      const cloudList = parseKeywords(items.cloudKeywords);
-      const countText = cloudList.length > 0 ? `${cloudList.length} 个词` : '';
+async function updateCloudInfo() {
+  const items = await chrome.storage.local.get(getStorageDefaults('cloudKeywords', 'lastSyncTime', 'syncStatus', 'syncError'));
+  const cloudList = parseKeywords(items.cloudKeywords);
+  const countText = cloudList.length > 0 ? `${cloudList.length} 个词` : '';
 
-      cloudInfoEl.classList.remove('error');
+  cloudInfoEl.classList.remove('error');
 
-      if (items.syncStatus === 'error') {
-        cloudInfoEl.classList.add('error');
-        cloudInfoEl.textContent = countText ? `${countText} · 同步失败` : '同步失败';
-      } else if (items.lastSyncTime) {
-        const timeText = relativeTime(items.lastSyncTime);
-        cloudInfoEl.textContent = countText ? `${countText} · ${timeText}` : timeText;
-      } else {
-        cloudInfoEl.textContent = countText;
-      }
-    });
+  if (items.syncStatus === 'error') {
+    cloudInfoEl.classList.add('error');
+    cloudInfoEl.textContent = countText ? `${countText} · 同步失败` : '同步失败';
+  } else if (items.lastSyncTime) {
+    const timeText = relativeTime(items.lastSyncTime);
+    cloudInfoEl.textContent = countText ? `${countText} · ${timeText}` : timeText;
+  } else {
+    cloudInfoEl.textContent = countText;
+  }
 }
 
-function renderCloudKeywords() {
-  chrome.storage.local
-    .get(getStorageDefaults('cloudKeywords', 'disabledCloudKeywords'))
-    .then((items) => {
-      let cloudList = parseKeywords(items.cloudKeywords);
-      let disabledList = items.disabledCloudKeywords || [];
+async function renderCloudKeywords() {
+  const items = await chrome.storage.local.get(getStorageDefaults('cloudKeywords', 'disabledCloudKeywords'));
+  let cloudList = parseKeywords(items.cloudKeywords);
+  let disabledList = items.disabledCloudKeywords || [];
 
       if (currentCloudSearchQuery !== '') {
         cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
@@ -511,13 +506,13 @@ function renderCloudKeywords() {
             className: 'tag-btn tag-btn-del',
             innerHTML: ICON_BAN,
             title: isDisabled ? '取消禁用' : '禁用',
-            onclick: () => {
+            onclick: async () => {
               if (isDisabled) {
                 disabledList = disabledList.filter((k) => k !== kw);
               } else {
                 disabledList.push(kw);
               }
-              chrome.storage.local.set({ disabledCloudKeywords: disabledList });
+              await chrome.storage.local.set({ disabledCloudKeywords: disabledList });
               renderCloudKeywords();
             },
           });
@@ -545,7 +540,6 @@ function renderCloudKeywords() {
       if (!currentCloudSearchQuery && savedScroll) {
         cloudScrollContainer.scrollTop = Number(savedScroll);
       }
-    });
 }
 
 if (toggleCloudSearchBtn && cloudSearchContainer && cloudSearchInput) {
@@ -699,7 +693,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const originalAutoBlockLength = autoBlockKeywords.length;
   autoBlockKeywords = autoBlockKeywords.filter((kw) => allValidKeywords.includes(kw));
   if (originalAutoBlockLength !== autoBlockKeywords.length) {
-    chrome.storage.local.set({ autoBlockKeywords });
+    await chrome.storage.local.set({ autoBlockKeywords });
   }
 
   checkUsernameEl.checked = items.checkUsername;
@@ -803,7 +797,7 @@ if (filterHistoryBtn && filterDropdown) {
     }
   });
 
-  filterDropdown.addEventListener('click', (e) => {
+  filterDropdown.addEventListener('click', async (e) => {
     const option = e.target.closest('.filter-option');
     if (option) {
       const reason = option.dataset.reason;
@@ -814,7 +808,7 @@ if (filterHistoryBtn && filterDropdown) {
         option.classList.add('active');
 
         currentFilterReason = reason;
-        chrome.storage.local.set({ historyFilterReason: reason });
+        await chrome.storage.local.set({ historyFilterReason: reason });
 
         applyHistoryFilter();
       }
@@ -1026,7 +1020,7 @@ function renderHistoryPage() {
       const oldReason = currentFilterReason;
       updateFilterOptions();
       if (oldReason !== currentFilterReason) {
-        chrome.storage.local.set({ historyFilterReason: currentFilterReason });
+        await chrome.storage.local.set({ historyFilterReason: currentFilterReason });
         applyHistoryFilter();
         return;
       }
@@ -1188,7 +1182,7 @@ viewHistoryBtn.addEventListener('click', async () => {
   updateFilterOptions();
 
   if (currentFilterReason !== oldReason) {
-    chrome.storage.local.set({ historyFilterReason: currentFilterReason });
+    await chrome.storage.local.set({ historyFilterReason: currentFilterReason });
   }
 
   applyHistoryFilter();
@@ -1247,11 +1241,10 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
       itemEl.classList.remove('fade-in-tag');
       itemEl.classList.add('fade-out-tag');
       const hToRemove = handle;
-      setTimeout(() => {
+      setTimeout(async () => {
         whitelist = whitelist.filter((h) => h !== hToRemove);
-        chrome.storage.local.set({ whitelist }, () => {
-          renderWhitelist();
-        });
+        await chrome.storage.local.set({ whitelist });
+        renderWhitelist();
       }, 200);
     };
 
@@ -1298,7 +1291,7 @@ function startEditWhitelist(tagEl, oldHandle) {
   input.select();
 }
 
-function confirmEditWhitelist(inputEl, oldHandle) {
+async function confirmEditWhitelist(inputEl, oldHandle) {
   const newVal = extractCleanScreenName(inputEl.value);
   if (!newVal) {
     showStatus('请输入有效的用户名');
@@ -1311,9 +1304,8 @@ function confirmEditWhitelist(inputEl, oldHandle) {
   if (existingIndex === -1 || existingIndex === oldIndex) {
     if (whitelist[oldIndex] !== newVal) {
       whitelist[oldIndex] = newVal;
-      chrome.storage.local.set({ whitelist }, () => {
-        renderWhitelist();
-      });
+      await chrome.storage.local.set({ whitelist });
+      renderWhitelist();
     } else {
       renderWhitelist();
     }
@@ -1340,7 +1332,7 @@ closeWhitelistBtn.addEventListener('click', () => {
   }
 });
 
-addWhitelistBtn.addEventListener('click', () => {
+addWhitelistBtn.addEventListener('click', async () => {
   const val = newWhitelistUser.value;
   const handle = extractCleanScreenName(val);
   if (!handle) {
@@ -1349,11 +1341,10 @@ addWhitelistBtn.addEventListener('click', () => {
   }
   if (!whitelist.includes(handle)) {
     whitelist.push(handle);
-    chrome.storage.local.set({ whitelist }, () => {
-      renderWhitelist(whitelist.length - 1);
-      newWhitelistUser.value = '';
-      whitelistList.scrollTop = whitelistList.scrollHeight;
-    });
+    await chrome.storage.local.set({ whitelist });
+    renderWhitelist(whitelist.length - 1);
+    newWhitelistUser.value = '';
+    whitelistList.scrollTop = whitelistList.scrollHeight;
   } else {
     showStatus('该用户已在白名单中');
   }
@@ -1403,7 +1394,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
 });
 
-function refreshHistoryDisplay() {
+async function refreshHistoryDisplay() {
   const prevScrollTop = historyList.scrollTop;
   const prevScrollHeight = historyList.scrollHeight;
   const prevRenderedCount = historyList.querySelectorAll('.history-item').length;
@@ -1412,7 +1403,7 @@ function refreshHistoryDisplay() {
   const oldReason = currentFilterReason;
   updateFilterOptions();
   if (oldReason !== currentFilterReason) {
-    chrome.storage.local.set({ historyFilterReason: currentFilterReason });
+    await chrome.storage.local.set({ historyFilterReason: currentFilterReason });
     applyHistoryFilter();
     return;
   }
