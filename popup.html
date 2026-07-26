@@ -11,7 +11,7 @@
   <div class="header">
     <div>
       <div class="title-row">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="
               color: var(--text);
               flex-shrink: 0;
               transform: translateY(1.6px);
@@ -28,13 +28,13 @@
     </div>
     <div class="header-actions">
       <a href="https://github.com/ethanzhou-dev/x-comment-blocker" target="_blank" class="icon-btn" title="GitHub 源码">
-        <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
           <path
             d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z">
           </path>
         </svg>
       </a>
-      <label class="toggle-switch" title="总开关">
+      <label class="toggle-switch" title="总开关" aria-label="总开关">
         <input type="checkbox" id="enableToggle" checked />
         <span class="toggle-slider"></span>
       </label>
@@ -45,10 +45,10 @@
     <span class="stats-text">已屏蔽
       <span class="stats-number" id="blockedCount">0</span> 条评论</span>
     <div class="stats-actions">
-      <button class="btn-outline" id="viewHistory" title="查看历史记录">
+      <button type="button" class="btn-outline" id="viewHistory" title="查看历史记录">
         查看
       </button>
-      <button class="btn-outline btn-danger" id="resetCount" title="清零">
+      <button type="button" class="btn-outline btn-danger" id="resetCount" title="清零">
         重置
       </button>
     </div>
@@ -56,7 +56,7 @@
 
   <div class="control-group">
     <div id="openCloudModalBtn" style="display: flex; align-items: center; gap: 8px; cursor: pointer;" title="查看云端词库">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
         <path d="M12 12v9"></path>
@@ -65,8 +65,8 @@
       <span style="font-size: 13px; font-weight: 500;">云端词库</span>
     </div>
     <span class="cloud-info" id="cloudInfo"></span>
-    <button class="icon-btn" id="sync-btn" title="同步云端词库">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    <button type="button" class="icon-btn" id="sync-btn" title="同步云端词库">
+      <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round">
         <g class="spin-inner" style="transform-origin: 12px 12px">
           <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
@@ -80,23 +80,23 @@
   <div class="section-user">
     <div class="section-header">
       <span class="section-label" style="display: flex; align-items: center; gap: 4px">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
         </svg>
         自定义词库
       </span>
       <div class="section-actions">
-        <button class="icon-btn" id="importBtn" title="导入词库">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"
+        <button type="button" class="icon-btn" id="importBtn" title="导入词库">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
         </button>
-        <button class="icon-btn" id="exportBtn" title="导出词库">
-          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"
+        <button type="button" class="icon-btn" id="exportBtn" title="导出词库">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="17 8 12 3 7 8"></polyline>
@@ -109,8 +109,8 @@
 
     <div class="keyword-input-row">
       <input type="text" id="newKeyword" placeholder="输入屏蔽词或正则…" />
-      <button class="btn-add-inside" id="addBtn" title="添加">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
+      <button type="button" class="btn-add-inside" id="addBtn" title="添加">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -126,11 +126,11 @@
     <div class="keyword-stats">
       <span class="keyword-count" id="keywordCount"></span>
       <span class="auto-block-count">共 <span id="autoBlockCount">0</span> 个自动拉黑词
-        <button class="icon-btn icon-btn-small" id="editAutoBlockBtn" title="编辑自动拉黑词">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+        <button type="button" class="icon-btn icon-btn-small" id="editAutoBlockBtn" title="编辑自动拉黑词">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
         </button>
-        <button class="icon-btn icon-btn-small" id="saveAutoBlockBtn" title="完成编辑" style="display: none;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <button type="button" class="icon-btn icon-btn-small" id="saveAutoBlockBtn" title="完成编辑" style="display: none;">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </button>
       </span>
     </div>
@@ -139,7 +139,7 @@
   <div class="settings-panel">
     <div class="settings-header" id="settingsHeader">
       <span class="settings-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>
           <path
@@ -149,7 +149,7 @@
         高级设置
       </span>
       <span class="settings-arrow" id="settingsArrow">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
@@ -185,21 +185,21 @@
         <span class="history-subtitle" id="cloudModalSubtitle"></span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; position: relative;">
-        <button class="icon-btn" id="editCloudAutoBlockBtn" title="编辑自动拉黑词">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+        <button type="button" class="icon-btn" id="editCloudAutoBlockBtn" title="编辑自动拉黑词">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
         </button>
-        <button class="icon-btn" id="saveCloudAutoBlockBtn" title="完成编辑" style="display: none;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <button type="button" class="icon-btn" id="saveCloudAutoBlockBtn" title="完成编辑" style="display: none;">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </button>
-        <button class="icon-btn" id="toggleCloudSearchBtn" title="搜索云端词库">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
+        <button type="button" class="icon-btn" id="toggleCloudSearchBtn" title="搜索云端词库">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
         </button>
-        <button class="icon-btn history-close" id="closeCloud" title="关闭">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
+        <button type="button" class="icon-btn history-close" id="closeCloud" title="关闭">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -229,22 +229,22 @@
             gap: 8px;
             position: relative;
           ">
-        <button class="icon-btn" id="openWhitelistBtn" title="白名单">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button type="button" class="icon-btn" id="openWhitelistBtn" title="白名单">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
             <polyline points="16 11 18 13 22 9"></polyline>
           </svg>
         </button>
-        <button class="icon-btn" id="toggleSearchBtn" title="搜索屏蔽历史">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
+        <button type="button" class="icon-btn" id="toggleSearchBtn" title="搜索屏蔽历史">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
         </button>
-        <button class="icon-btn" id="filterHistoryBtn" title="过滤屏蔽原因">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
+        <button type="button" class="icon-btn" id="filterHistoryBtn" title="过滤屏蔽原因">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <line x1="21" y1="4" x2="14" y2="4"></line>
             <line x1="10" y1="4" x2="3" y2="4"></line>
@@ -260,8 +260,8 @@
         <div class="filter-dropdown" id="filterDropdown">
           <!-- options will be injected by JS -->
         </div>
-        <button class="icon-btn history-close" id="closeHistory" title="关闭">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
+        <button type="button" class="icon-btn history-close" id="closeHistory" title="关闭">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -282,14 +282,14 @@
         <span class="history-subtitle" id="whitelistCount">(0)</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; position: relative;">
-        <button class="icon-btn" id="toggleWhitelistSearchBtn" title="搜索白名单">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button type="button" class="icon-btn" id="toggleWhitelistSearchBtn" title="搜索白名单">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
         </button>
-        <button class="icon-btn history-close" id="closeWhitelist" title="关闭">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button type="button" class="icon-btn history-close" id="closeWhitelist" title="关闭">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
@@ -302,8 +302,8 @@
     <div style="padding: 12px 20px 0;">
       <div class="keyword-input-row" style="margin-bottom: 0;">
         <input type="text" id="newWhitelistUser" placeholder="输入需加白的用户名(无@)..." />
-        <button class="btn-add-inside" id="addWhitelistBtn" title="添加">
-          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button type="button" class="btn-add-inside" id="addWhitelistBtn" title="添加">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>

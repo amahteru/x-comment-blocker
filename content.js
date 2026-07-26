@@ -49,7 +49,7 @@ async function mergeKeywords() {
       ? parseKeywords(items.cloudKeywords).filter((kw) => !disabledCloudKws.includes(kw))
       : [];
 
-    const blockKeywords = [...new Set([...cloudKws, ...userKws])];
+    const blockKeywords = Array.from(new Set(cloudKws).union(new Set(userKws)));
     const rawAutoBlockKws = items.autoBlockKeywords || [];
     const activeBlockSet = new Set(blockKeywords);
     const autoBlockKws = rawAutoBlockKws.filter((kw) => activeBlockSet.has(kw));
@@ -528,7 +528,7 @@ function filterTweets(specificTweets = null) {
         .replace(/\s+/g, ' ')
         .trim();
 
-      const uniqueId = tweetId ? tweetId : `${normalizedBody}|${stableHandle}`;
+      const uniqueId = tweetId ?? `${normalizedBody}|${stableHandle}`;
 
       if (!localSentIds.has(uniqueId)) {
         localSentIds.add(uniqueId);
