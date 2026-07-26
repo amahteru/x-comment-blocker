@@ -141,7 +141,7 @@ async function syncCloudKeywords() {
     });
     return true;
   } catch (e) {
-    const isTimeout = e.name === 'AbortError';
+    const isTimeout = Error.isError(e) && e.name === 'AbortError';
     await chrome.storage.local
       .set({
         syncStatus: 'error',

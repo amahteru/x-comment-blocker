@@ -411,7 +411,7 @@ async function handleBlockUser(screenName, isBlock) {
       return { success: false, reason: `请求失败: HTTP ${response.status}` };
     }
   } catch (error) {
-    return { success: false, reason: error.message };
+    return { success: false, reason: Error.isError(error) ? error.message : String(error) };
   }
 }
 
