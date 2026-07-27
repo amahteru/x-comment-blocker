@@ -368,7 +368,7 @@
     }
 
     const cleanUserName = userName
-      ? userName.replaceAll(/[\s_.-]+/gv, '').replaceAll(invisibleCharsRegex, '')
+      ? userName.replaceAll(/[\s_.\-]+/gv, '').replaceAll(invisibleCharsRegex, '')
       : '';
 
     if (matchesAutoBlocklist(tweetBody)) {
