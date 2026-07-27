@@ -77,7 +77,8 @@
             : null;
           if (match) {
             try {
-              customRegexes.push(new RegExp(match.groups.pattern, match.groups.flags));
+              const cleanFlags = match.groups.flags.replace(/[gy]/g, '');
+              customRegexes.push(new RegExp(match.groups.pattern, cleanFlags));
             } catch (e) {
               console.warn('[X-Blocker] Invalid regex ignored:', kw, e);
             }

@@ -897,8 +897,12 @@ function applyHistoryFilter() {
       const text = item.text?.toLowerCase() ?? '';
 
       let user = item.user?.toLowerCase() ?? '';
-      if (user.startsWith('/')) {
-        user = `@${user.substring(1)}`;
+      if (user) {
+        if (user.startsWith('/')) {
+          user = `@${user.substring(1)}`;
+        } else if (!user.startsWith('@')) {
+          user = `@${user}`;
+        }
       }
 
       const displayName = item.displayName?.toLowerCase() ?? '';
