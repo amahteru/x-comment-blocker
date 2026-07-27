@@ -387,7 +387,6 @@ body {
   flex-shrink: 0;
 }
 
-/* stylelint-disable-next-line no-descending-specificity */
 .toggle-switch input {
   opacity: 0;
   width: 0;
@@ -510,9 +509,7 @@ body {
 }
 
 .control-group label svg,
-/* stylelint-disable-next-line no-descending-specificity */
 .section-label svg,
-/* stylelint-disable-next-line no-descending-specificity */
 .settings-title svg {
   position: relative;
   top: 1px;
@@ -784,7 +781,6 @@ body {
   color: var(--accent);
 }
 
-/* stylelint-disable-next-line no-descending-specificity */
 body.disabled .control-group,
 body.disabled .section-user,
 body.disabled .settings-panel {

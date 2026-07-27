@@ -548,9 +548,7 @@
     if (pendingSpam.length > 0) {
       try {
         chrome.runtime.sendMessage({ action: 'recordSpam', items: pendingSpam }).catch(() => {});
-      } catch {
-        // Ignore error if background script is not ready
-      }
+      } catch {}
     }
   }
 

@@ -109,7 +109,6 @@ export async function syncCloudKeywords() {
 
     const cloudList = parseKeywords(text);
 
-    // Clean up stale disabled keywords and auto block keywords
     const storageItems = await chrome.storage.local.get(
       getStorageDefaults('disabledCloudKeywords', 'autoBlockKeywords', 'keywords'),
     );

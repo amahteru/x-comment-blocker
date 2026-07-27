@@ -151,7 +151,7 @@ addBtn.addEventListener('click', () => {
 
       if (!userKeywords.includes(kw)) {
         userKeywords.push(kw);
-        // Do not add to autoblock by default
+
         addedCount++;
       }
     }
@@ -572,7 +572,7 @@ if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
     editCloudAutoBlockBtn.style.display = 'inline-flex';
     autoSave();
     renderCloudKeywords();
-    renderUserKeywords(); // update counts
+    renderUserKeywords();
   });
 }
 
@@ -602,7 +602,7 @@ async function triggerCloudSync(manual = false) {
       if (manual) showStatus('同步失败，请检查网络');
     } else {
       if (manual) showStatus('云端词库已同步');
-      // Reload state after successful sync
+
       const items = await chrome.storage.local.get(['autoBlockKeywords']);
       if (items.autoBlockKeywords) {
         autoBlockKeywords = new Set(items.autoBlockKeywords);
@@ -684,7 +684,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   userKeywords = parseKeywords(items.keywords);
   const rawAutoBlockKeywords = items.autoBlockKeywords ?? [];
 
-  // Clean up autoBlockKeywords (remove words that are no longer in either list)
   const allValidKeywordsSet = new Set(
     Iterator.concat(userKeywords, parseKeywords(items.cloudKeywords || '')),
   );
