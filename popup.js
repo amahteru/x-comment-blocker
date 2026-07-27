@@ -132,38 +132,7 @@ function isKeywordRegex(kw) {
   return kw.length >= 3 && kw.startsWith('/') && /\/[a-zA-Z]*$/.test(kw);
 }
 
-addBtn.addEventListener('click', () => {
-  addBtn.disabled = true;
-  try {
-    const rawValue = newKeywordInput.value.trim();
-    if (!rawValue) {
-      newKeywordInput.focus();
-      return;
-    }
-    const kws = Iterator.from(rawValue.split('\n'))
-      .map((k) => k.replaceAll(invisibleCharsRegex, '').trim())
-      .filter((k) => k)
-      .toArray();
 
-    let addedCount = 0;
-    for (const rawKw of kws) {
-      const kw = isKeywordRegex(rawKw) ? rawKw : rawKw.toLowerCase();
-
-      if (!userKeywords.includes(kw)) {
-        userKeywords.push(kw);
-
-        addedCount++;
-      }
-    }
-    if (addedCount > 0) {
-      newKeywordInput.value = '';
-      renderUserKeywords(userKeywords.length - 1);
-      autoSave();
-    }
-  } finally {
-    addBtn.disabled = false;
-  }
-});
 
 function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
   if (userKeywords.length === 0) {
@@ -398,15 +367,16 @@ importFile.addEventListener('change', async (e) => {
 });
 
 function formatHistoryTime(timestamp) {
-  const date =
-    Temporal.Instant.fromEpochMilliseconds(timestamp).toZonedDateTimeISO('Asia/Shanghai');
-  const now = Temporal.Now.zonedDateTimeISO('Asia/Shanghai');
+  const localTz = Temporal.Now.timeZoneId();
+  const date = Temporal.Instant.fromEpochMilliseconds(timestamp).toZonedDateTimeISO(localTz);
+  const now = Temporal.Now.zonedDateTimeISO(localTz);
 
   if (date.toPlainDate().equals(now.toPlainDate())) {
     return new Intl.DateTimeFormat('zh-CN', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
+      timeZone: localTz,
     }).format(timestamp);
   } else if (date.year === now.year) {
     return `${date.month}月${date.day}日`;
@@ -583,6 +553,11 @@ openCloudModalBtn.addEventListener('click', () => {
 
 closeCloudBtn.addEventListener('click', () => {
   cloudModal.classList.remove('open');
+  if (isEditingCloudAutoBlock) {
+    isEditingCloudAutoBlock = false;
+    saveCloudAutoBlockBtn.style.display = 'none';
+    editCloudAutoBlockBtn.style.display = 'inline-flex';
+  }
 });
 
 let cloudScrollDebounceTimer = null;
