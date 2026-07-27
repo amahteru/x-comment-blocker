@@ -132,8 +132,6 @@ function isKeywordRegex(kw) {
   return kw.length >= 3 && kw.startsWith('/') && /\/[a-zA-Z]*$/.test(kw);
 }
 
-
-
 function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
   if (userKeywords.length === 0) {
     keywordList.replaceChildren(
