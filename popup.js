@@ -945,7 +945,11 @@ function renderHistoryPage() {
 
     const userInfo = el('div', { className: 'history-item-user-info' });
     if (handle && item.displayName) {
-      const nameSpan = el('span', { className: 'history-display-name', textContent: item.displayName, title: item.displayName });
+      const nameSpan = el('span', {
+        className: 'history-display-name',
+        textContent: item.displayName,
+        title: item.displayName,
+      });
       const handleSpan = el('span', { className: 'history-handle', textContent: `@${handle}` });
       highlightText(nameSpan, currentSearchQuery);
       highlightText(handleSpan, currentSearchQuery);
@@ -955,12 +959,19 @@ function renderHistoryPage() {
       highlightText(handleSpan, currentSearchQuery);
       userInfo.append(handleSpan);
     } else {
-      const userSpan = el('span', { className: 'history-display-name', textContent: item.user ?? '未知用户' });
+      const userSpan = el('span', {
+        className: 'history-display-name',
+        textContent: item.user ?? '未知用户',
+      });
       highlightText(userSpan, currentSearchQuery);
       userInfo.append(userSpan);
     }
 
-    const removeBtn = el('button', { className: 'btn-remove-x', innerHTML: ICON_DEL, title: '从记录中移除此项' });
+    const removeBtn = el('button', {
+      className: 'btn-remove-x',
+      innerHTML: ICON_DEL,
+      title: '从记录中移除此项',
+    });
     const actionsChildren = [
       el('span', { className: 'history-time', textContent: formatHistoryTime(item.time) }),
       removeBtn,
@@ -985,7 +996,9 @@ function renderHistoryPage() {
           const action = isCurrentlyBlocked ? 'unblockUserOnX' : 'blockUserOnX';
           const res = await chrome.runtime.sendMessage({ action, screenName });
           if (res?.success) {
-            const currentItems = await chrome.storage.local.get(getStorageDefaults('blockedUsersOnX'));
+            const currentItems = await chrome.storage.local.get(
+              getStorageDefaults('blockedUsersOnX'),
+            );
             let currentList = currentItems.blockedUsersOnX ?? [];
 
             if (!isCurrentlyBlocked) {
@@ -1022,7 +1035,9 @@ function renderHistoryPage() {
     removeBtn.onclick = async () => {
       removeBtn.disabled = true;
       div.style.opacity = '0.5';
-      await chrome.runtime.sendMessage({ action: 'removeSpamRecord', id: item.id, time: item.time }).catch(() => {});
+      await chrome.runtime
+        .sendMessage({ action: 'removeSpamRecord', id: item.id, time: item.time })
+        .catch(() => {});
       div.remove();
 
       currentHistory = currentHistory.filter((h) => !(h.id === item.id && h.time === item.time));
@@ -1257,8 +1272,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.blockedUsersOnX) {
     currentBlockedUsersOnX = changes.blockedUsersOnX.newValue ?? [];
     const screenNames = new Set(
-      Iterator.from(document.querySelectorAll('button.btn-block-x'))
-        .map((btn) => btn.dataset.screenName)
+      Iterator.from(document.querySelectorAll('button.btn-block-x')).map(
+        (btn) => btn.dataset.screenName,
+      ),
     );
     screenNames.forEach((name) => updateBlockBtns(name));
   }
