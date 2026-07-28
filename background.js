@@ -104,9 +104,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === ALARM_NAME) {
     doSync();
   } else if (alarm.name === 'autoBlockWatchdog') {
-    if (typeof autoBlockManager !== 'undefined') {
-      autoBlockManager.process();
-    }
+    autoBlockManager.process();
   }
 });
 

@@ -128,6 +128,32 @@ function el(tag, props, children) {
   return element;
 }
 
+function emptyHistoryHint(text = '暂无记录') {
+  return el('div', { className: 'history-item' }, [
+    el('div', {
+      className: 'history-item-text',
+      style: 'text-align: center; color: var(--text-muted); padding: 12px 0;',
+      textContent: text,
+    }),
+  ]);
+}
+
+function updateBlockBtns(screenName, { disabled = false, loading = false } = {}) {
+  document
+    .querySelectorAll(`button.btn-block-x[data-screen-name="${screenName}"]`)
+    .forEach((btn) => {
+      btn.disabled = disabled;
+      if (loading) {
+        btn.textContent = '请求中...';
+        return;
+      }
+      const isBlocked = currentBlockedUsersOnX.includes(screenName);
+      btn.textContent = isBlocked ? '已拉黑' : '拉黑';
+      btn.classList.toggle('success', isBlocked);
+      btn.title = isBlocked ? '点击解除拉黑' : '在 X 上拉黑该账号';
+    });
+}
+
 function isKeywordRegex(kw) {
   return kw.length >= 3 && kw.startsWith('/') && /\/[a-zA-Z]*$/.test(kw);
 }
@@ -893,15 +919,7 @@ function applyHistoryFilter() {
   historyList.replaceChildren();
 
   if (filteredHistory.length === 0) {
-    historyList.replaceChildren(
-      el('div', { className: 'history-item' }, [
-        el('div', {
-          className: 'history-item-text',
-          style: 'text-align: center; color: var(--text-muted); padding: 12px 0;',
-          textContent: '暂无记录',
-        }),
-      ]),
-    );
+    historyList.replaceChildren(emptyHistoryHint());
     return;
   }
 
@@ -923,68 +941,88 @@ function renderHistoryPage() {
   const fragment = document.createDocumentFragment();
   for (let i = start; i < end; i++) {
     const item = filteredHistory[i];
-    const div = document.createElement('div');
-    div.className = 'history-item';
-
-    const header = document.createElement('div');
-    header.className = 'history-item-header';
-
-    const userInfo = document.createElement('div');
-    userInfo.className = 'history-item-user-info';
-
     const handle = extractCleanScreenName(item.user);
 
-    if (handle) {
-      if (item.displayName) {
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'history-display-name';
-        nameSpan.textContent = item.displayName;
-        nameSpan.title = item.displayName;
-        highlightText(nameSpan, currentSearchQuery);
-
-        const handleSpan = document.createElement('span');
-        handleSpan.className = 'history-handle';
-        handleSpan.textContent = `@${handle}`;
-        highlightText(handleSpan, currentSearchQuery);
-
-        userInfo.append(nameSpan, handleSpan);
-      } else {
-        const userSpan = document.createElement('span');
-        userSpan.className = 'history-handle';
-        userSpan.textContent = `@${handle}`;
-        highlightText(userSpan, currentSearchQuery);
-        userInfo.appendChild(userSpan);
-      }
+    const userInfo = el('div', { className: 'history-item-user-info' });
+    if (handle && item.displayName) {
+      const nameSpan = el('span', { className: 'history-display-name', textContent: item.displayName, title: item.displayName });
+      const handleSpan = el('span', { className: 'history-handle', textContent: `@${handle}` });
+      highlightText(nameSpan, currentSearchQuery);
+      highlightText(handleSpan, currentSearchQuery);
+      userInfo.append(nameSpan, handleSpan);
+    } else if (handle) {
+      const handleSpan = el('span', { className: 'history-handle', textContent: `@${handle}` });
+      highlightText(handleSpan, currentSearchQuery);
+      userInfo.append(handleSpan);
     } else {
-      const userSpan = document.createElement('span');
-      userSpan.className = 'history-display-name';
-      userSpan.textContent = item.user ?? '未知用户';
+      const userSpan = el('span', { className: 'history-display-name', textContent: item.user ?? '未知用户' });
       highlightText(userSpan, currentSearchQuery);
-      userInfo.appendChild(userSpan);
+      userInfo.append(userSpan);
     }
 
-    const actionsDiv = document.createElement('div');
-    actionsDiv.className = 'history-item-actions';
+    const removeBtn = el('button', { className: 'btn-remove-x', innerHTML: ICON_DEL, title: '从记录中移除此项' });
+    const actionsChildren = [
+      el('span', { className: 'history-time', textContent: formatHistoryTime(item.time) }),
+      removeBtn,
+    ];
 
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'history-time';
-    timeSpan.textContent = formatHistoryTime(item.time);
-    actionsDiv.appendChild(timeSpan);
+    if (handle) {
+      const screenName = handle;
+      const blockBtn = el('button', { className: 'btn-block-x' });
+      blockBtn.dataset.screenName = screenName;
+      updateBlockBtns(screenName);
 
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'btn-remove-x';
-    removeBtn.innerHTML = ICON_DEL;
-    removeBtn.title = '从记录中移除此项';
+      const isBlocked = currentBlockedUsersOnX.includes(screenName);
+      blockBtn.textContent = isBlocked ? '已拉黑' : '拉黑';
+      blockBtn.classList.toggle('success', isBlocked);
+      blockBtn.title = isBlocked ? '点击解除拉黑' : '在 X 上拉黑该账号';
+
+      blockBtn.onclick = async () => {
+        const isCurrentlyBlocked = currentBlockedUsersOnX.includes(screenName);
+        updateBlockBtns(screenName, { disabled: true, loading: true });
+
+        try {
+          const action = isCurrentlyBlocked ? 'unblockUserOnX' : 'blockUserOnX';
+          const res = await chrome.runtime.sendMessage({ action, screenName });
+          if (res?.success) {
+            const currentItems = await chrome.storage.local.get(getStorageDefaults('blockedUsersOnX'));
+            let currentList = currentItems.blockedUsersOnX ?? [];
+
+            if (!isCurrentlyBlocked) {
+              if (!currentList.includes(screenName)) currentList.push(screenName);
+            } else {
+              currentList = currentList.filter((u) => u !== screenName);
+            }
+
+            await chrome.storage.local.set({ blockedUsersOnX: currentList });
+            currentBlockedUsersOnX = currentList;
+          } else {
+            showStatus(res?.reason || '操作失败');
+          }
+        } catch {
+          showStatus('请求失败');
+        }
+        updateBlockBtns(screenName);
+      };
+      actionsChildren.push(blockBtn);
+    }
+
+    const actionsDiv = el('div', { className: 'history-item-actions' }, actionsChildren);
+
+    let displayText = item.text || '[无内容或已隐藏]';
+    if (item.reason) displayText = `[${item.reason}] ${displayText}`;
+    const textDiv = el('div', { className: 'history-item-text', textContent: displayText });
+    highlightText(textDiv, currentSearchQuery);
+
+    const div = el('div', { className: 'history-item' }, [
+      el('div', { className: 'history-item-header' }, [userInfo, actionsDiv]),
+      textDiv,
+    ]);
+
     removeBtn.onclick = async () => {
       removeBtn.disabled = true;
       div.style.opacity = '0.5';
-      await chrome.runtime
-        .sendMessage({
-          action: 'removeSpamRecord',
-          id: item.id,
-          time: item.time,
-        })
-        .catch(() => {});
+      await chrome.runtime.sendMessage({ action: 'removeSpamRecord', id: item.id, time: item.time }).catch(() => {});
       div.remove();
 
       currentHistory = currentHistory.filter((h) => !(h.id === item.id && h.time === item.time));
@@ -1000,122 +1038,12 @@ function renderHistoryPage() {
 
       historyNextIndex = Math.max(0, historyNextIndex - 1);
       if (filteredHistory.length === 0) {
-        historyList.replaceChildren(
-          el('div', { className: 'history-item' }, [
-            el('div', {
-              className: 'history-item-text',
-              style: 'text-align: center; color: var(--text-muted); padding: 12px 0;',
-              textContent: '暂无记录',
-            }),
-          ]),
-        );
+        historyList.replaceChildren(emptyHistoryHint());
       } else if (historyList.querySelectorAll('.history-item').length === 0) {
         renderHistoryPage();
       }
     };
-    actionsDiv.appendChild(removeBtn);
 
-    if (handle) {
-      const blockBtn = document.createElement('button');
-      blockBtn.className = 'btn-block-x';
-
-      const screenName = handle;
-      blockBtn.dataset.screenName = screenName;
-
-      const updateBtnState = () => {
-        const isBlocked = currentBlockedUsersOnX.includes(screenName);
-        if (isBlocked) {
-          blockBtn.textContent = '已拉黑';
-          blockBtn.classList.add('success');
-          blockBtn.title = '点击解除拉黑';
-        } else {
-          blockBtn.textContent = '拉黑';
-          blockBtn.classList.remove('success');
-          blockBtn.title = '在 X 上拉黑该账号';
-        }
-      };
-      updateBtnState();
-
-      blockBtn.onclick = async () => {
-        const isCurrentlyBlocked = currentBlockedUsersOnX.includes(screenName);
-
-        document
-          .querySelectorAll(`button.btn-block-x[data-screen-name="${screenName}"]`)
-          .forEach((btn) => {
-            btn.disabled = true;
-            btn.textContent = '请求中...';
-          });
-
-        try {
-          const action = isCurrentlyBlocked ? 'unblockUserOnX' : 'blockUserOnX';
-          const res = await chrome.runtime.sendMessage({ action, screenName });
-          if (res?.success) {
-            const currentItems = await chrome.storage.local.get(
-              getStorageDefaults('blockedUsersOnX'),
-            );
-            let currentList = currentItems.blockedUsersOnX ?? [];
-
-            if (!isCurrentlyBlocked) {
-              if (!currentList.includes(screenName)) currentList.push(screenName);
-            } else {
-              currentList = currentList.filter((u) => u !== screenName);
-            }
-
-            await chrome.storage.local.set({ blockedUsersOnX: currentList });
-            currentBlockedUsersOnX = currentList;
-
-            document
-              .querySelectorAll(`button.btn-block-x[data-screen-name="${screenName}"]`)
-              .forEach((btn) => {
-                const isNowBlocked = currentBlockedUsersOnX.includes(screenName);
-                if (isNowBlocked) {
-                  btn.textContent = '已拉黑';
-                  btn.classList.add('success');
-                  btn.title = '点击解除拉黑';
-                } else {
-                  btn.textContent = '拉黑';
-                  btn.classList.remove('success');
-                  btn.title = '在 X 上拉黑该账号';
-                }
-                btn.disabled = false;
-              });
-          } else {
-            document
-              .querySelectorAll(`button.btn-block-x[data-screen-name="${screenName}"]`)
-              .forEach((btn) => {
-                btn.disabled = false;
-                const isBlocked = currentBlockedUsersOnX.includes(screenName);
-                btn.textContent = isBlocked ? '已拉黑' : '拉黑';
-              });
-            showStatus(res?.reason || '操作失败');
-          }
-        } catch {
-          document
-            .querySelectorAll(`button.btn-block-x[data-screen-name="${screenName}"]`)
-            .forEach((btn) => {
-              btn.disabled = false;
-              const isBlocked = currentBlockedUsersOnX.includes(screenName);
-              btn.textContent = isBlocked ? '已拉黑' : '拉黑';
-            });
-          showStatus('请求失败');
-        }
-      };
-      actionsDiv.appendChild(blockBtn);
-    }
-
-    header.append(userInfo, actionsDiv);
-
-    let displayText = item.text || '[无内容或已隐藏]';
-    if (item.reason) {
-      displayText = `[${item.reason}] ${displayText}`;
-    }
-
-    const textDiv = document.createElement('div');
-    textDiv.className = 'history-item-text';
-    textDiv.textContent = displayText;
-    highlightText(textDiv, currentSearchQuery);
-
-    div.append(header, textDiv);
     fragment.appendChild(div);
   }
   historyList.appendChild(fragment);
@@ -1138,15 +1066,7 @@ historyList.addEventListener('scroll', () => {
 
 viewHistoryBtn.addEventListener('click', async () => {
   historyModal.classList.add('open');
-  historyList.replaceChildren(
-    el('div', { className: 'history-item' }, [
-      el('div', {
-        className: 'history-item-text',
-        style: 'text-align: center; color: var(--text-muted); padding: 12px 0;',
-        textContent: '加载中...',
-      }),
-    ]),
-  );
+  historyList.replaceChildren(emptyHistoryHint('加载中...'));
 
   const items = await chrome.storage.local.get(
     getStorageDefaults('blockedHistory', 'blockedUsersOnX', 'historyFilterReason'),
@@ -1336,19 +1256,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (changes.blockedUsersOnX) {
     currentBlockedUsersOnX = changes.blockedUsersOnX.newValue ?? [];
-    document.querySelectorAll('button.btn-block-x').forEach((btn) => {
-      const screenName = btn.dataset.screenName;
-      const isBlocked = currentBlockedUsersOnX.includes(screenName);
-      if (isBlocked) {
-        btn.textContent = '已拉黑';
-        btn.classList.add('success');
-        btn.title = '点击解除拉黑';
-      } else {
-        btn.textContent = '拉黑';
-        btn.classList.remove('success');
-        btn.title = '在 X 上拉黑该账号';
-      }
-    });
+    const screenNames = new Set(
+      Iterator.from(document.querySelectorAll('button.btn-block-x'))
+        .map((btn) => btn.dataset.screenName)
+    );
+    screenNames.forEach((name) => updateBlockBtns(name));
   }
   if (changes.blockedHistory && historyModal.classList.contains('open')) {
     const newHistory = changes.blockedHistory.newValue || [];
