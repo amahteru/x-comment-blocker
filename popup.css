@@ -283,6 +283,11 @@ body {
   border-color: #eb4747;
 }
 
+.keyword-tag.is-autoblock .tag-btn-edit:hover {
+  color: var(--danger);
+  background: rgb(239 68 68 / 12%);
+}
+
 .keyword-tag .tag-checkbox {
   margin: 3px;
   cursor: pointer;
