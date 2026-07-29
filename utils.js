@@ -100,7 +100,7 @@ export async function syncCloudKeywords() {
         cache: 'no-store',
         signal: AbortSignal.timeout(15000),
       });
-      
+
       if (!resp.ok) {
         throw new Error(`CDN HTTP Error: ${resp.status}`);
       }
@@ -125,9 +125,11 @@ export async function syncCloudKeywords() {
     );
 
     const currentCloudList = parseKeywords(storageItems.cloudKeywords ?? '');
-    
+
     if (isCDN && cloudList.length < currentCloudList.length) {
-      console.log(`[X-Blocker] CDN cache (${cloudList.length} items) is older than local (${currentCloudList.length} items). Update aborted.`);
+      console.log(
+        `[X-Blocker] CDN cache (${cloudList.length} items) is older than local (${currentCloudList.length} items). Update aborted.`,
+      );
       await chrome.storage.local.set({
         lastSyncTime: Temporal.Now.instant().epochMilliseconds,
         syncStatus: 'ok',
