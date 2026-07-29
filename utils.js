@@ -1,5 +1,7 @@
-export const CLOUD_KEYWORDS_URL =
+export const CLOUD_KEYWORDS_API =
   'https://api.github.com/repos/ethanzhou-dev/x-comment-blocker/contents/keywords.txt';
+export const CLOUD_KEYWORDS_CDN =
+  'https://cdn.jsdelivr.net/gh/ethanzhou-dev/x-comment-blocker@main/keywords.txt';
 export const SYNC_INTERVAL_MINUTES = 360;
 export const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
 export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
@@ -75,13 +77,36 @@ export async function syncCloudKeywords() {
       headers['If-None-Match'] = cloudETag;
     }
 
-    const resp = await fetch(CLOUD_KEYWORDS_URL, {
-      headers,
-      cache: 'no-store',
-      signal: AbortSignal.timeout(15000),
-    });
+    let resp;
+    let isCDN = false;
 
-    if (resp.status === 304) {
+    try {
+      resp = await fetch(CLOUD_KEYWORDS_API, {
+        headers,
+        cache: 'no-store',
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (resp.status === 403 || resp.status === 429) {
+        throw new Error('API Rate Limit');
+      }
+      if (!resp.ok && resp.status !== 304) {
+        throw new Error(`API HTTP Error: ${resp.status}`);
+      }
+    } catch (apiError) {
+      console.warn('[X-Blocker] API update failed, falling back to CDN:', apiError);
+      isCDN = true;
+      resp = await fetch(`${CLOUD_KEYWORDS_CDN}?t=${Date.now()}`, {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(15000),
+      });
+      
+      if (!resp.ok) {
+        throw new Error(`CDN HTTP Error: ${resp.status}`);
+      }
+    }
+
+    if (!isCDN && resp.status === 304) {
       await chrome.storage.local.set({
         lastSyncTime: Temporal.Now.instant().epochMilliseconds,
         syncStatus: 'ok',
@@ -89,29 +114,27 @@ export async function syncCloudKeywords() {
       });
       return true;
     }
-    if (resp.status === 403 || resp.status === 429) {
-      await chrome.storage.local.set({
-        syncStatus: 'error',
-        syncError: 'API 请求限流，请稍后重试',
-      });
-      return false;
-    }
-    if (!resp.ok) {
-      await chrome.storage.local.set({
-        syncStatus: 'error',
-        syncError: `HTTP ${resp.status}`,
-      });
-      return false;
-    }
 
     const text = await resp.text();
-    const newETag = resp.headers.get('ETag') ?? '';
+    const newETag = isCDN ? '' : (resp.headers.get('ETag') ?? '');
 
     const cloudList = parseKeywords(text);
 
     const storageItems = await chrome.storage.local.get(
-      getStorageDefaults('disabledCloudKeywords', 'autoBlockKeywords', 'keywords'),
+      getStorageDefaults('disabledCloudKeywords', 'autoBlockKeywords', 'keywords', 'cloudKeywords'),
     );
+
+    const currentCloudList = parseKeywords(storageItems.cloudKeywords ?? '');
+    
+    if (isCDN && cloudList.length < currentCloudList.length) {
+      console.log(`[X-Blocker] CDN cache (${cloudList.length} items) is older than local (${currentCloudList.length} items). Update aborted.`);
+      await chrome.storage.local.set({
+        lastSyncTime: Temporal.Now.instant().epochMilliseconds,
+        syncStatus: 'ok',
+        syncError: '',
+      });
+      return true;
+    }
     const disabledCloudKeywords = storageItems.disabledCloudKeywords ?? [];
     const autoBlockKeywords = storageItems.autoBlockKeywords ?? [];
     const userKws = parseKeywords(storageItems.keywords);
