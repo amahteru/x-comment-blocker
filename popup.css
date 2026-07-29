@@ -220,8 +220,8 @@ body {
 }
 
 .keyword-tag.regex-tag {
-  background: rgb(168 85 247 / 15%);
-  border-color: rgb(168 85 247 / 30%);
+  background: #2e213c;
+  border-color: #432a5d;
 }
 
 .keyword-tag.regex-tag:hover {
@@ -234,7 +234,7 @@ body {
 
 .keyword-tag.regex-tag .tag-btn-edit:hover {
   color: #c084fc;
-  background: rgb(168 85 247 / 15%);
+  background: #2e213c;
 }
 .keyword-tag.fade-out-tag {
   animation: fade-out 0.2s ease forwards;
@@ -275,8 +275,8 @@ body {
 }
 
 .keyword-tag.is-autoblock {
-  border-color: color-mix(in srgb, var(--danger) 40%, var(--card));
-  background: color-mix(in srgb, var(--danger) 10%, var(--card));
+  border-color: #6e2a2b;
+  background: #2e1c1f;
 }
 
 .keyword-tag .tag-checkbox {
