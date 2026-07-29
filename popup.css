@@ -275,8 +275,12 @@ body {
 }
 
 .keyword-tag.is-autoblock {
-  border-color: #6e2a2b;
-  background: #2e1c1f;
+  border-color: #592527;
+  background: #381f21;
+}
+
+.keyword-tag.is-autoblock:hover {
+  border-color: #eb4747;
 }
 
 .keyword-tag .tag-checkbox {
