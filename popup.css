@@ -234,7 +234,7 @@ body {
 
 .keyword-tag.regex-tag .tag-btn-edit:hover {
   color: #c084fc;
-  background: #2e213c;
+  background: rgb(192 132 252 / 12%);
 }
 .keyword-tag.fade-out-tag {
   animation: fade-out 0.2s ease forwards;
