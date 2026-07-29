@@ -30,6 +30,9 @@ const addBtn = document.getElementById('addBtn');
 const importBtn = document.getElementById('importBtn');
 const exportBtn = document.getElementById('exportBtn');
 const importFile = document.getElementById('importFile');
+const exportAllBtn = document.getElementById('exportAllBtn');
+const importAllBtn = document.getElementById('importAllBtn');
+const importAllFile = document.getElementById('importAllFile');
 const checkUsernameEl = document.getElementById('checkUsername');
 const onlyCommentsEl = document.getElementById('onlyComments');
 const blockSpecialCharsEl = document.getElementById('blockSpecialChars');
@@ -387,6 +390,51 @@ importFile.addEventListener('change', async (e) => {
     showStatus('文件读取失败');
   } finally {
     importFile.value = '';
+  }
+});
+
+exportAllBtn.addEventListener('click', async () => {
+  try {
+    const allItems = await chrome.storage.local.get(null);
+    const content = JSON.stringify(allItems, null, 2);
+    const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `x-comment-blocker-backup-${Temporal.Now.plainDateISO().toString()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('全量导出成功');
+  } catch {
+    showStatus('导出失败');
+  }
+});
+
+importAllBtn.addEventListener('click', () => {
+  importAllFile.click();
+});
+
+importAllFile.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    const content = await file.text();
+    const parsed = JSON.parse(content);
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      await chrome.storage.local.clear();
+      await chrome.storage.local.set(parsed);
+      showStatus('全量恢复成功，重新加载中...');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } else {
+      showStatus('无效的配置文件格式');
+    }
+  } catch {
+    showStatus('文件读取或解析失败');
+  } finally {
+    importAllFile.value = '';
   }
 });
 

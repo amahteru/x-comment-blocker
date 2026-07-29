@@ -175,6 +175,27 @@
         <label for="blockEmoji">屏蔽带emoji的评论</label>
         <input type="checkbox" id="blockEmoji" />
       </div>
+
+      <div class="control-group">
+        <span style="font-size: 13px; color: var(--text);" title="包含所有设置开关、自定义词库、自动拉黑词、白名单及历史记录">全量数据备份</span>
+        <div style="display: flex; gap: 12px;">
+          <button type="button" class="icon-btn" id="exportAllBtn" title="导出全量JSON">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </button>
+          <button type="button" class="icon-btn" id="importAllBtn" title="导入全量JSON">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+          </button>
+          <input type="file" id="importAllFile" accept=".json" style="display: none" />
+        </div>
+      </div>
     </div>
   </div>
 
