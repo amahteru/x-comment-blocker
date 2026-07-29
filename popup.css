@@ -221,7 +221,7 @@ body {
 
 .keyword-tag.regex-tag {
   background: #2e213c;
-  border-color: #432a5d;
+  border-color: #523073;
 }
 
 .keyword-tag.regex-tag:hover {
@@ -275,7 +275,7 @@ body {
 }
 
 .keyword-tag.is-autoblock {
-  border-color: #592527;
+  border-color: #6e2a2b;
   background: #381f21;
 }
 
