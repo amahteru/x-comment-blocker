@@ -432,18 +432,41 @@ function sanitizeImportedState(obj) {
             }))
         : [];
     } else if (
-      ['whitelist', 'autoBlockKeywords', 'disabledCloudKeywords', 'autoBlockQueue', 'blockedUsersOnX'].includes(key)
+      [
+        'whitelist',
+        'autoBlockKeywords',
+        'disabledCloudKeywords',
+        'autoBlockQueue',
+        'blockedUsersOnX',
+      ].includes(key)
     ) {
       out[key] = Array.isArray(value) ? value.filter((v) => typeof v === 'string') : [];
     } else if (
-      ['checkUsername', 'onlyComments', 'blockSpecialChars', 'blockEmoji', 'enabled', 'cloudEnabled'].includes(key)
+      [
+        'checkUsername',
+        'onlyComments',
+        'blockSpecialChars',
+        'blockEmoji',
+        'enabled',
+        'cloudEnabled',
+      ].includes(key)
     ) {
       out[key] = value === true;
     } else if (
-      ['keywords', 'cloudKeywords', 'cloudETag', 'syncStatus', 'syncError', 'autoBlockLastDate', 'historyFilterReason'].includes(key)
+      [
+        'keywords',
+        'cloudKeywords',
+        'cloudETag',
+        'syncStatus',
+        'syncError',
+        'autoBlockLastDate',
+        'historyFilterReason',
+      ].includes(key)
     ) {
       out[key] = typeof value === 'string' ? value : String(value ?? '');
-    } else if (['blockedCount', 'autoBlockToday', 'autoBlockPausedUntil', 'lastSyncTime'].includes(key)) {
+    } else if (
+      ['blockedCount', 'autoBlockToday', 'autoBlockPausedUntil', 'lastSyncTime'].includes(key)
+    ) {
       out[key] = Number(value) || 0;
     } else {
       out[key] = value;
