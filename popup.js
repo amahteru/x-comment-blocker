@@ -702,6 +702,12 @@ closeCloudBtn.addEventListener('click', () => {
     saveCloudAutoBlockBtn.style.display = 'none';
     editCloudAutoBlockBtn.style.display = 'inline-flex';
   }
+  clearTimeout(cloudSearchDebounceTimer);
+  if (cloudSearchContainer?.classList.contains('open')) {
+    cloudSearchContainer.classList.remove('open');
+    cloudSearchInput.value = '';
+    currentCloudSearchQuery = '';
+  }
 });
 
 let cloudScrollDebounceTimer = null;
