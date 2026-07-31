@@ -72,6 +72,20 @@ storageQueue.enqueue(async () => {
     });
 });
 
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.blockedHistory) return;
+  storageQueue.enqueue(async () => {
+    const items = await chrome.storage.local.get(getStorageDefaults('blockedHistory'));
+    const history = items.blockedHistory ?? [];
+    globalSpamCache.clear();
+    Iterator.from(history)
+      .filter((item) => item.id)
+      .forEach((item) => {
+        globalSpamCache.add(item.id);
+      });
+  });
+});
+
 async function doSync() {
   if (isSyncing) return { success: false, reason: 'busy' };
   using _lock = new SyncLock();
