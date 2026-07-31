@@ -154,20 +154,13 @@
             }
           }
 
-          if (mutation.target) {
-            const el =
-              mutation.target.nodeType === Node.ELEMENT_NODE
-                ? mutation.target
-                : mutation.target.parentElement;
-            if (el?.closest) {
-              if (!el.closest('[data-testid="tweetText"], [data-testid="User-Name"]')) {
-                continue;
-              }
-              const closestTweet = el.closest('[data-testid="cellInnerDiv"]');
-              if (closestTweet) {
-                pendingTweets.add(closestTweet);
-              }
-            }
+          const el = mutation.target;
+          if (!el.closest('[data-testid="tweetText"], [data-testid="User-Name"]')) {
+            continue;
+          }
+          const closestTweet = el.closest('[data-testid="cellInnerDiv"]');
+          if (closestTweet) {
+            pendingTweets.add(closestTweet);
           }
         }
 
@@ -460,9 +453,7 @@
       const quickHash = `${rawTweetText}|${rawUserName}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}`;
       if (state.quickHash === quickHash) {
         if (state.isSpam) {
-          if (!tweet.classList.contains('x-comment-blocker-hidden')) {
-            tweet.classList.add('x-comment-blocker-hidden');
-          }
+          tweet.classList.add('x-comment-blocker-hidden');
         } else {
           tweet.classList.remove('x-comment-blocker-hidden');
         }
@@ -513,9 +504,7 @@
 
       state.isSpam = isSpam;
       if (isSpam) {
-        if (!tweet.classList.contains('x-comment-blocker-hidden')) {
-          tweet.classList.add('x-comment-blocker-hidden');
-        }
+        tweet.classList.add('x-comment-blocker-hidden');
         const normalizedBody = rawTweetText
           .replaceAll(invisibleCharsRegex, '')
           .replaceAll(/\s+/gv, ' ')

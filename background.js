@@ -303,8 +303,7 @@ autoBlockManager.init().then(() => {
   autoBlockManager.process();
 });
 
-chrome.runtime.onMessage.addListener((message, sender) => {
-  void sender;
+chrome.runtime.onMessage.addListener((message) => {
   if (message.action === 'syncNow') {
     return doSync();
   }

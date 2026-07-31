@@ -1,7 +1,6 @@
 import {
   extractCleanScreenName,
   getStorageDefaults,
-  invisibleCharsRegex,
   parseKeywords,
   SYNC_INTERVAL_MS,
 } from './utils.js';
@@ -1107,7 +1106,6 @@ function renderHistoryPage() {
       const screenName = handle;
       const blockBtn = el('button', { className: 'btn-block-x' });
       blockBtn.dataset.screenName = screenName;
-      updateBlockBtns(screenName);
 
       const isBlocked = currentBlockedUsersOnX.includes(screenName);
       blockBtn.textContent = isBlocked ? '已拉黑' : '拉黑';
