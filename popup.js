@@ -414,6 +414,44 @@ importAllBtn.addEventListener('click', () => {
   importAllFile.click();
 });
 
+function sanitizeImportedState(obj) {
+  const out = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'blockedHistory') {
+      out[key] = Array.isArray(value)
+        ? value
+            .filter((item) => item && typeof item === 'object')
+            .map((item) => ({
+              id: typeof item.id === 'string' ? item.id : String(item.id ?? ''),
+              text: typeof item.text === 'string' ? item.text : '',
+              user: typeof item.user === 'string' ? item.user : '',
+              displayName: typeof item.displayName === 'string' ? item.displayName : '',
+              reason: typeof item.reason === 'string' ? item.reason : '',
+              time: Number(item.time) || 0,
+              isAutoBlock: item.isAutoBlock === true,
+            }))
+        : [];
+    } else if (
+      ['whitelist', 'autoBlockKeywords', 'disabledCloudKeywords', 'autoBlockQueue', 'blockedUsersOnX'].includes(key)
+    ) {
+      out[key] = Array.isArray(value) ? value.filter((v) => typeof v === 'string') : [];
+    } else if (
+      ['checkUsername', 'onlyComments', 'blockSpecialChars', 'blockEmoji', 'enabled', 'cloudEnabled'].includes(key)
+    ) {
+      out[key] = value === true;
+    } else if (
+      ['keywords', 'cloudKeywords', 'cloudETag', 'syncStatus', 'syncError', 'autoBlockLastDate', 'historyFilterReason'].includes(key)
+    ) {
+      out[key] = typeof value === 'string' ? value : String(value ?? '');
+    } else if (['blockedCount', 'autoBlockToday', 'autoBlockPausedUntil', 'lastSyncTime'].includes(key)) {
+      out[key] = Number(value) || 0;
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 importAllFile.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -422,9 +460,19 @@ importAllFile.addEventListener('change', async (e) => {
     const content = await file.text();
     const parsed = JSON.parse(content);
     if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      await chrome.storage.local.clear();
-      await chrome.storage.local.set(parsed);
-      showStatus('全量恢复成功，重新加载中...');
+      const sanitized = sanitizeImportedState(parsed);
+      const currentKeys = Object.keys(await chrome.storage.local.get(null));
+      try {
+        await chrome.storage.local.set(sanitized);
+      } catch {
+        showStatus('恢复失败:文件数据超出存储容量,原有数据未受影响');
+        return;
+      }
+      const staleKeys = currentKeys.filter((k) => !(k in sanitized));
+      if (staleKeys.length > 0) {
+        chrome.storage.local.remove(staleKeys).catch(() => {});
+      }
+      showStatus('全量恢复成功,重新加载中...');
       setTimeout(() => {
         window.location.reload();
       }, 1500);
@@ -439,6 +487,7 @@ importAllFile.addEventListener('change', async (e) => {
 });
 
 function formatHistoryTime(timestamp) {
+  if (!Number.isFinite(timestamp)) return '';
   const localTz = Temporal.Now.timeZoneId();
   const date = Temporal.Instant.fromEpochMilliseconds(timestamp).toZonedDateTimeISO(localTz);
   const now = Temporal.Now.zonedDateTimeISO(localTz);
