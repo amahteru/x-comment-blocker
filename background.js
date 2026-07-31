@@ -296,7 +296,6 @@ chrome.runtime.onMessage.addListener((message, sender) => {
   }
   if (message.action === 'clearSpamCache') {
     storageQueue.enqueue(async () => {
-      globalSpamCache.clear();
       await chrome.storage.local.set({ blockedCount: 0, blockedHistory: [] });
     });
     notifyContentScripts({ action: 'clearLocalSentIds' });
@@ -323,9 +322,6 @@ function handleRemoveSpamRecord(id, time) {
   }
 
   storageQueue.enqueue(async () => {
-    if (id) {
-      globalSpamCache.delete(id);
-    }
     const storageItems = await chrome.storage.local.get(
       getStorageDefaults('blockedCount', 'blockedHistory'),
     );
@@ -352,11 +348,6 @@ function handleRecordSpam(items) {
       .filter((item) => !globalSpamCache.has(item.id))
       .map((item) => {
         globalSpamCache.add(item.id);
-        if (globalSpamCache.size > 5000) {
-          for (const val of globalSpamCache.values().take(1000)) {
-            globalSpamCache.delete(val);
-          }
-        }
         return {
           id: item.id,
           text: item.text,
