@@ -148,24 +148,28 @@ class AutoBlockManager {
     }
   }
 
-  async init() {
-    if (this.initialized) return;
-    this.initPromise ??= (async () => {
-      const defaults = getStorageDefaults(
+  async refreshFromStorage() {
+    const items = await chrome.storage.local.get(
+      getStorageDefaults(
         'autoBlockQueue',
         'autoBlockToday',
         'autoBlockLastDate',
         'autoBlockPausedUntil',
         'blockedUsersOnX',
-      );
-      const items = await chrome.storage.local.get(defaults);
+      ),
+    );
 
-      this.queue = items.autoBlockQueue ?? [];
-      this.countToday = items.autoBlockToday ?? 0;
-      this.lastDate = items.autoBlockLastDate ?? '';
-      this.pausedUntil = items.autoBlockPausedUntil ?? 0;
-      this.blockedUsersSet = new Set(items.blockedUsersOnX ?? []);
+    this.queue = items.autoBlockQueue ?? [];
+    this.countToday = items.autoBlockToday ?? 0;
+    this.lastDate = items.autoBlockLastDate ?? '';
+    this.pausedUntil = items.autoBlockPausedUntil ?? 0;
+    this.blockedUsersSet = new Set(items.blockedUsersOnX ?? []);
+  }
 
+  async init() {
+    if (this.initialized) return;
+    this.initPromise ??= (async () => {
+      await this.refreshFromStorage();
       await this.checkDailyReset();
 
       this.initialized = true;
@@ -179,6 +183,7 @@ class AutoBlockManager {
 
   async enqueueBatch(screenNames) {
     await this.init();
+    await this.refreshFromStorage();
     if (!screenNames || screenNames.length === 0) return;
 
     const validNames = Iterator.from(screenNames)
@@ -201,6 +206,7 @@ class AutoBlockManager {
       await this.init();
 
       while (true) {
+        await this.refreshFromStorage();
         await this.checkDailyReset();
 
         const now = Temporal.Now.instant();
@@ -221,43 +227,57 @@ class AutoBlockManager {
 
         const currentItem = this.queue.at(0);
 
+        let outcome = null;
+        let failReason = '';
+        let pauseUntil = 0;
         try {
           const res = await handleBlockUser(currentItem, true);
           if (res?.success) {
-            this.queue.shift();
-            this.countToday++;
-            this.blockedUsersSet.add(currentItem);
-
-            if (this.blockedUsersSet.size > 5000) {
-              const dropCount = this.blockedUsersSet.size - 5000;
-              this.blockedUsersSet = new Set(this.blockedUsersSet.values().drop(dropCount));
-            }
-            const blockedUsersArray = this.blockedUsersSet.values().toArray();
-
-            await this.saveState({
-              autoBlockQueue: this.queue,
-              autoBlockToday: this.countToday,
-              blockedUsersOnX: blockedUsersArray,
-            });
-          } else if (
-            res?.reason &&
-            (res.reason.includes('429') || res.reason.includes('HTTP 429'))
-          ) {
-            console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
-            this.pausedUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
-            await this.saveState({ autoBlockPausedUntil: this.pausedUntil });
-            break;
+            outcome = 'success';
+          } else if (res?.reason && (res.reason.includes('429') || res.reason.includes('HTTP 429'))) {
+            outcome = 'rate-limited';
+            pauseUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
           } else {
-            console.error(
-              '[X-Blocker] Auto block failed for',
-              currentItem,
-              res ? res.reason : 'unknown',
-            );
-            this.queue.shift();
-            await this.saveState({ autoBlockQueue: this.queue });
+            outcome = 'failed';
+            failReason = res?.reason ?? 'unknown';
           }
         } catch (e) {
           console.error('[X-Blocker] Auto block task execution error:', e);
+          outcome = 'failed';
+          failReason = 'task error';
+        }
+
+        const storageQueue = (await chrome.storage.local.get('autoBlockQueue')).autoBlockQueue ?? [];
+        const queueUnchanged =
+          storageQueue.length === this.queue.length &&
+          storageQueue.every((item, index) => item === this.queue[index]);
+        if (!queueUnchanged) {
+          console.warn('[X-Blocker] Auto block queue changed externally, re-syncing.');
+          continue;
+        }
+
+        if (outcome === 'success') {
+          this.queue.shift();
+          this.countToday++;
+          this.blockedUsersSet.add(currentItem);
+
+          if (this.blockedUsersSet.size > 5000) {
+            const dropCount = this.blockedUsersSet.size - 5000;
+            this.blockedUsersSet = new Set(this.blockedUsersSet.values().drop(dropCount));
+          }
+
+          await this.saveState({
+            autoBlockQueue: this.queue,
+            autoBlockToday: this.countToday,
+            blockedUsersOnX: this.blockedUsersSet.values().toArray(),
+          });
+        } else if (outcome === 'rate-limited') {
+          console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
+          this.pausedUntil = pauseUntil;
+          await this.saveState({ autoBlockPausedUntil: this.pausedUntil });
+          break;
+        } else {
+          console.error('[X-Blocker] Auto block failed for', currentItem, failReason);
           this.queue.shift();
           await this.saveState({ autoBlockQueue: this.queue });
         }
