@@ -350,7 +350,7 @@ function handleRecordSpam(items) {
         globalSpamCache.add(item.id);
         return {
           id: item.id,
-          text: item.text,
+          text: item.text.slice(0, 200),
           user: item.user,
           displayName: item.displayName,
           reason: item.reason,
@@ -382,8 +382,8 @@ function handleRecordSpam(items) {
     if (uniqueSpams.length === 0) return;
 
     history.unshift(...uniqueSpams);
-    if (history.length > 2000) {
-      history.length = 2000;
+    if (history.length > 5000) {
+      history.length = 5000;
     }
 
     await chrome.storage.local.set({
