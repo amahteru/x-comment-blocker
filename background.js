@@ -234,7 +234,10 @@ class AutoBlockManager {
           const res = await handleBlockUser(currentItem, true);
           if (res?.success) {
             outcome = 'success';
-          } else if (res?.reason && (res.reason.includes('429') || res.reason.includes('HTTP 429'))) {
+          } else if (
+            res?.reason &&
+            (res.reason.includes('429') || res.reason.includes('HTTP 429'))
+          ) {
             outcome = 'rate-limited';
             pauseUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
           } else {
@@ -247,7 +250,8 @@ class AutoBlockManager {
           failReason = 'task error';
         }
 
-        const storageQueue = (await chrome.storage.local.get('autoBlockQueue')).autoBlockQueue ?? [];
+        const storageQueue =
+          (await chrome.storage.local.get('autoBlockQueue')).autoBlockQueue ?? [];
         const queueUnchanged =
           storageQueue.length === this.queue.length &&
           storageQueue.every((item, index) => item === this.queue[index]);
