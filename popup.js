@@ -1042,6 +1042,7 @@ function applyHistoryFilter() {
 
   historyNextIndex = 0;
   historyList.replaceChildren();
+  historyList.scrollTop = 0;
 
   if (filteredHistory.length === 0) {
     historyList.replaceChildren(emptyHistoryHint());
