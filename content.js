@@ -504,6 +504,7 @@
 
       state.isSpam = isSpam;
       if (isSpam) {
+        tweet.classList.remove('x-comment-blocker-hidden-reply');
         tweet.classList.add('x-comment-blocker-hidden');
         const normalizedBody = rawTweetText
           .replaceAll(invisibleCharsRegex, '')
@@ -531,6 +532,27 @@
           });
         }
       } else {
+        const prev = tweet.previousElementSibling;
+        let isHiddenReply = false;
+        
+        if (
+          prev &&
+          (prev.classList.contains('x-comment-blocker-hidden') ||
+            prev.classList.contains('x-comment-blocker-hidden-reply'))
+        ) {
+          const hasThreadLine = !!tweet.querySelector('div[style*="width: 2px"]') || !!tweet.querySelector('[class*="r-1d2f490"]');
+          const hasReplyingTo = !!tweet.querySelector('div[dir="ltr"] a[href^="/"]');
+          if (hasThreadLine || hasReplyingTo) {
+            isHiddenReply = true;
+          }
+        }
+
+        if (isHiddenReply) {
+          tweet.classList.add('x-comment-blocker-hidden-reply');
+        } else {
+          tweet.classList.remove('x-comment-blocker-hidden-reply');
+        }
+        
         tweet.classList.remove('x-comment-blocker-hidden');
       }
     }

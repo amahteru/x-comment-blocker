@@ -1,3 +1,4 @@
-.x-comment-blocker-hidden {
+.x-comment-blocker-hidden,
+.x-comment-blocker-hidden-reply {
   display: none !important;
 }
