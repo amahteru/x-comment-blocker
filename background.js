@@ -439,6 +439,7 @@ async function handleBlockUser(screenName, isBlock) {
     const response = await fetch(`https://x.com/i/api/1.1/blocks/${endpoint}`, {
       method: 'POST',
       headers,
+      credentials: 'include',
       body: `screen_name=${encodeURIComponent(cleanName)}`,
     });
 
