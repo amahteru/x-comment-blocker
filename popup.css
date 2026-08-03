@@ -783,6 +783,7 @@ body {
 .history-item-text {
   color: var(--text);
   overflow-wrap: anywhere;
+  word-break: break-all;
 }
 
 .search-highlight {
