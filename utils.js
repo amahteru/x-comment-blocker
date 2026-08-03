@@ -26,6 +26,7 @@ const STORAGE_DEFAULTS = {
   onlyComments: true,
   blockSpecialChars: false,
   blockEmoji: false,
+  blockGrok: false,
   enabled: true,
   blockedCount: 0,
   blockedHistory: [],

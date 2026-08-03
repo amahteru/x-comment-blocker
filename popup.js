@@ -36,6 +36,7 @@ const checkUsernameEl = document.getElementById('checkUsername');
 const onlyCommentsEl = document.getElementById('onlyComments');
 const blockSpecialCharsEl = document.getElementById('blockSpecialChars');
 const blockEmojiEl = document.getElementById('blockEmoji');
+const blockGrokEl = document.getElementById('blockGrok');
 const enableToggleEl = document.getElementById('enableToggle');
 const cloudToggleEl = document.getElementById('cloudToggle');
 const cloudInfoEl = document.getElementById('cloudInfo');
@@ -96,6 +97,7 @@ async function autoSave() {
     onlyComments: onlyCommentsEl.checked,
     blockSpecialChars: blockSpecialCharsEl.checked,
     blockEmoji: blockEmojiEl.checked,
+    blockGrok: blockGrokEl.checked,
     enabled: enableToggleEl.checked,
     cloudEnabled: cloudToggleEl.checked,
   });
@@ -446,6 +448,7 @@ function sanitizeImportedState(obj) {
         'onlyComments',
         'blockSpecialChars',
         'blockEmoji',
+        'blockGrok',
         'enabled',
         'cloudEnabled',
       ].includes(key)
@@ -766,6 +769,7 @@ checkUsernameEl.addEventListener('change', () => autoSave());
 onlyCommentsEl.addEventListener('change', () => autoSave());
 blockSpecialCharsEl.addEventListener('change', () => autoSave());
 blockEmojiEl.addEventListener('change', () => autoSave());
+blockGrokEl.addEventListener('change', () => autoSave());
 cloudToggleEl.addEventListener('change', () => autoSave());
 
 syncBtn.addEventListener('click', () => {
@@ -794,6 +798,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'onlyComments',
       'blockSpecialChars',
       'blockEmoji',
+      'blockGrok',
       'enabled',
       'cloudEnabled',
       'blockedCount',
@@ -820,6 +825,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   onlyCommentsEl.checked = items.onlyComments;
   blockSpecialCharsEl.checked = items.blockSpecialChars;
   blockEmojiEl.checked = items.blockEmoji;
+  blockGrokEl.checked = items.blockGrok;
   enableToggleEl.checked = items.enabled;
   cloudToggleEl.checked = items.cloudEnabled;
   blockedCountEl.textContent = items.blockedCount ?? 0;

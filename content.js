@@ -8,6 +8,7 @@
   let onlyComments = true;
   let blockSpecialChars = false;
   let blockEmoji = false;
+  let blockGrok = false;
   let filterEnabled = true;
   let filterTimer = null;
   let filterVersion = 0;
@@ -117,6 +118,7 @@
           'onlyComments',
           'blockSpecialChars',
           'blockEmoji',
+          'blockGrok',
           'enabled',
           'whitelist',
         ),
@@ -126,6 +128,7 @@
       onlyComments = items.onlyComments;
       blockSpecialChars = items.blockSpecialChars;
       blockEmoji = items.blockEmoji;
+      blockGrok = items.blockGrok;
       filterEnabled = items.enabled;
       whitelistSet = new Set(items.whitelist ?? []);
 
@@ -216,6 +219,10 @@
     }
     if (changes.blockEmoji) {
       blockEmoji = changes.blockEmoji.newValue;
+      needsFilter = true;
+    }
+    if (changes.blockGrok) {
+      blockGrok = changes.blockGrok.newValue;
       needsFilter = true;
     }
     if (changes.blockSpecialChars) {
@@ -321,7 +328,12 @@
     return !!pageContext.pageStatusId;
   }
 
-  function detectSpam(textNode, userNode, rawTweetText, rawUserName, isStatusPage, isMainTweet) {
+  function hasGrokCard(tweet) {
+    if (!tweet) return false;
+    return !!tweet.querySelector('a[href*="/i/grok"], meta[content*="/i/grok"]');
+  }
+
+  function detectSpam(tweet, textNode, userNode, rawTweetText, rawUserName, isStatusPage, isMainTweet) {
     const tweetBody = rawTweetText.replaceAll(invisibleCharsRegex, '');
     const userName = rawUserName;
     let stableHandle = '';
@@ -336,6 +348,17 @@
 
     if (stableHandle && whitelistSet.has(stableHandle)) {
       return { isSpam: false };
+    }
+
+    if (blockGrok && hasGrokCard(tweet)) {
+      return {
+        isSpam: true,
+        isAutoBlock: false,
+        blockReason: 'Grok卡片屏蔽',
+        userName,
+        stableHandle,
+        displayName,
+      };
     }
 
     if (isStatusPage && !isMainTweet) {
@@ -449,8 +472,9 @@
 
       const rawTweetText = textNode ? getTweetTextForKeywords(textNode) : '';
       const rawUserName = userNode ? getTweetTextForKeywords(userNode) : '';
+      const hasGrok = blockGrok ? hasGrokCard(tweet) : false;
 
-      const quickHash = `${rawTweetText}|${rawUserName}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}`;
+      const quickHash = `${rawTweetText}|${rawUserName}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}|${hasGrok}`;
       if (state.quickHash === quickHash) {
         if (state.isSpam) {
           tweet.classList.add('x-comment-blocker-hidden');
@@ -464,7 +488,7 @@
       state.quickHash = quickHash;
 
       let shouldCheck =
-        filterEnabled && (blockRegexes.length > 0 || blockEmoji || blockSpecialChars);
+        filterEnabled && (blockRegexes.length > 0 || blockEmoji || blockSpecialChars || blockGrok);
       if (shouldCheck && onlyComments && !isStatusPage) shouldCheck = false;
 
       let isMainTweet = false;
@@ -493,6 +517,7 @@
 
       if (shouldCheck) {
         ({ isSpam, isAutoBlock, blockReason, userName, stableHandle, displayName } = detectSpam(
+          tweet,
           textNode,
           userNode,
           rawTweetText,
@@ -506,10 +531,18 @@
       if (isSpam) {
         tweet.classList.remove('x-comment-blocker-hidden-reply');
         tweet.classList.add('x-comment-blocker-hidden');
-        const normalizedBody = rawTweetText
+        let normalizedBody = rawTweetText
           .replaceAll(invisibleCharsRegex, '')
           .replaceAll(/\s+/gv, ' ')
           .trim();
+
+        if (blockReason === 'Grok卡片屏蔽') {
+          const grokMeta = tweet.querySelector('a[href*="/i/grok"], meta[content*="/i/grok"]');
+          const grokLink = grokMeta ? (grokMeta.getAttribute('content') || grokMeta.href) : '';
+          if (grokLink) {
+            normalizedBody = normalizedBody ? `${normalizedBody}\n${grokLink}` : grokLink;
+          }
+        }
 
         const uniqueId = tweetId ?? `${normalizedBody}|${stableHandle}`;
 
