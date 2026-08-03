@@ -545,7 +545,9 @@
           .trim();
 
         if (blockReason === 'Grok屏蔽') {
-          const grokMeta = tweet.querySelector('a[href*="/i/grok/share"], meta[content*="/i/grok/share"]');
+          const grokMeta = tweet.querySelector(
+            'a[href*="/i/grok/share"], meta[content*="/i/grok/share"]',
+          );
           const grokLink = grokMeta ? grokMeta.getAttribute('content') || grokMeta.href : '';
           if (grokLink) {
             normalizedBody = normalizedBody ? `${normalizedBody}\n${grokLink}` : grokLink;
