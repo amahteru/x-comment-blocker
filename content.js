@@ -330,7 +330,7 @@
 
   function hasGrokCard(tweet) {
     if (!tweet) return false;
-    return !!tweet.querySelector('a[href*="/i/grok"], meta[content*="/i/grok"]');
+    return !!tweet.querySelector('a[href*="/i/grok/share"], meta[content*="/i/grok/share"]');
   }
 
   function detectSpam(
@@ -545,7 +545,7 @@
           .trim();
 
         if (blockReason === 'Grok卡片屏蔽') {
-          const grokMeta = tweet.querySelector('a[href*="/i/grok"], meta[content*="/i/grok"]');
+          const grokMeta = tweet.querySelector('a[href*="/i/grok/share"], meta[content*="/i/grok/share"]');
           const grokLink = grokMeta ? grokMeta.getAttribute('content') || grokMeta.href : '';
           if (grokLink) {
             normalizedBody = normalizedBody ? `${normalizedBody}\n${grokLink}` : grokLink;
