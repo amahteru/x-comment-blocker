@@ -362,7 +362,7 @@
       return {
         isSpam: true,
         isAutoBlock: false,
-        blockReason: 'Grok卡片屏蔽',
+        blockReason: 'Grok屏蔽',
         userName,
         stableHandle,
         displayName,
@@ -544,7 +544,7 @@
           .replaceAll(/\s+/gv, ' ')
           .trim();
 
-        if (blockReason === 'Grok卡片屏蔽') {
+        if (blockReason === 'Grok屏蔽') {
           const grokMeta = tweet.querySelector('a[href*="/i/grok/share"], meta[content*="/i/grok/share"]');
           const grokLink = grokMeta ? grokMeta.getAttribute('content') || grokMeta.href : '';
           if (grokLink) {
