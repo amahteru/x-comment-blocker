@@ -333,7 +333,15 @@
     return !!tweet.querySelector('a[href*="/i/grok"], meta[content*="/i/grok"]');
   }
 
-  function detectSpam(tweet, textNode, userNode, rawTweetText, rawUserName, isStatusPage, isMainTweet) {
+  function detectSpam(
+    tweet,
+    textNode,
+    userNode,
+    rawTweetText,
+    rawUserName,
+    isStatusPage,
+    isMainTweet,
+  ) {
     const tweetBody = rawTweetText.replaceAll(invisibleCharsRegex, '');
     const userName = rawUserName;
     let stableHandle = '';
@@ -538,7 +546,7 @@
 
         if (blockReason === 'Grok卡片屏蔽') {
           const grokMeta = tweet.querySelector('a[href*="/i/grok"], meta[content*="/i/grok"]');
-          const grokLink = grokMeta ? (grokMeta.getAttribute('content') || grokMeta.href) : '';
+          const grokLink = grokMeta ? grokMeta.getAttribute('content') || grokMeta.href : '';
           if (grokLink) {
             normalizedBody = normalizedBody ? `${normalizedBody}\n${grokLink}` : grokLink;
           }

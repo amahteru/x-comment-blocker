@@ -1154,7 +1154,7 @@ function renderHistoryPage() {
     const actionsDiv = el('div', { className: 'history-item-actions' }, actionsChildren);
 
     let displayText = item.text || '[无内容或已隐藏]';
-    if (item.reason) displayText = `[${item.reason}] ${displayText}`;
+    if (item.reason) displayText = `[${item.reason}]\xA0${displayText}`;
     const textDiv = el('div', { className: 'history-item-text', textContent: displayText });
     highlightText(textDiv, currentSearchQuery);
 
