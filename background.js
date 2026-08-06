@@ -265,8 +265,8 @@ class AutoBlockManager {
           this.countToday++;
           this.blockedUsersSet.add(currentItem);
 
-          if (this.blockedUsersSet.size > 5000) {
-            const dropCount = this.blockedUsersSet.size - 5000;
+          if (this.blockedUsersSet.size > 10000) {
+            const dropCount = this.blockedUsersSet.size - 10000;
             this.blockedUsersSet = new Set(this.blockedUsersSet.values().drop(dropCount));
           }
 
@@ -405,8 +405,8 @@ function handleRecordSpam(items) {
     if (uniqueSpams.length === 0) return;
 
     history.unshift(...uniqueSpams);
-    if (history.length > 5000) {
-      history.length = 5000;
+    if (history.length > 10000) {
+      history.length = 10000;
     }
 
     await chrome.storage.local.set({
