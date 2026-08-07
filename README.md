@@ -1,9 +1,10 @@
 # X(Twitter) Comment Blocker
 
-用于自动屏蔽 X (Twitter) 评论区垃圾信息与引流机器人的浏览器插件。
+用于自动屏蔽 X (Twitter) 评论区垃圾信息与引流机器人的浏览器插件，支持 Chrome、Edge 和 Firefox。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 ![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)
+![Firefox Add-on](https://img.shields.io/badge/Firefox-Add--on-FF7139?logo=firefoxbrowser&logoColor=white)
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-brightgreen.svg)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/gagacedifiphcndckimeihhcbcclkach.svg)](https://chromewebstore.google.com/detail/xtwitter-comment-blocker/gagacedifiphcndckimeihhcbcclkach)
 
@@ -21,6 +22,7 @@
 - **快捷操作**：选中网页文本后，右键可将其快速加入自定义屏蔽词库。
 - **拉黑功能**：
   - **手动拉黑**：在拦截历史记录中，可以将账号一键拉黑。
+  - **批量拉黑**：在拦截历史记录中，可以将所有历史用户一键加入拉黑队列。
   - **自动拉黑**：可针对特定的屏蔽词（自定义或云端）开启自动拉黑，命中该词的评论作者将被自动拉黑。
 - **数据与历史**：记录屏蔽数量，并可查看最近拦截的 10000 条评论。
 
@@ -31,7 +33,17 @@
 您可以在 Chrome 应用商店获取最新版本：
 [X(Twitter) Comment Blocker - Chrome 应用商店](https://chromewebstore.google.com/detail/xtwitter-comment-blocker/gagacedifiphcndckimeihhcbcclkach)
 
-### 2. 手动安装
+### 2. 在 Firefox 中临时安装
+
+需要 Firefox 142 或更高版本。
+
+1. 下载或克隆本项目代码。
+2. 打开 `about:debugging#/runtime/this-firefox`。
+3. 点击 **临时载入附加组件**，选择项目目录中的 `manifest.json`。
+
+临时安装会在 Firefox 退出后失效。长期安装需要使用经 Mozilla 签名的版本。
+
+### 3. 在 Chromium 浏览器中手动安装
 
 适用于基于 Chromium 的浏览器（如 Chrome, Edge）
 

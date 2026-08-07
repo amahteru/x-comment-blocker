@@ -1,4 +1,5 @@
 import {
+  browserApi as chrome,
   extractCleanScreenName,
   getStorageDefaults,
   parseKeywords,
@@ -861,6 +862,7 @@ let searchDebounceTimer = null;
 
 const filterHistoryBtn = document.getElementById('filterHistoryBtn');
 const filterDropdown = document.getElementById('filterDropdown');
+const blockAllHistoryBtn = document.getElementById('blockAllHistoryBtn');
 const toggleSearchBtn = document.getElementById('toggleSearchBtn');
 const historySearchContainer = document.getElementById('historySearchContainer');
 const historySearchInput = document.getElementById('historySearchInput');
@@ -870,6 +872,59 @@ const whitelistSearchContainer = document.getElementById('whitelistSearchContain
 const whitelistSearchInput = document.getElementById('whitelistSearchInput');
 let currentWhitelistSearchQuery = '';
 let whitelistSearchDebounceTimer = null;
+
+if (blockAllHistoryBtn) {
+  blockAllHistoryBtn.addEventListener('click', async () => {
+    if (blockAllHistoryBtn.disabled) return;
+
+    const usersToBlock = Array.from(
+      new Set(
+        filteredHistory
+          .map((item) => extractCleanScreenName(item.user))
+          .filter((name) => /^[a-zA-Z0-9_]{1,15}$/v.test(name))
+      )
+    );
+
+    if (usersToBlock.length === 0) {
+      showStatus('当前列表没有可拉黑的用户');
+      return;
+    }
+
+    if (
+      !confirm(
+        `【危险操作警告】\n此操作将会把当前列表中显示的 ${usersToBlock.length} 个历史用户批量添加到拉黑队列中。\n确定要继续吗？`
+      )
+    ) {
+      return;
+    }
+
+    blockAllHistoryBtn.disabled = true;
+    blockAllHistoryBtn.title = '正在加入拉黑队列...';
+
+    try {
+      const result = await chrome.runtime.sendMessage({
+        action: 'blockAllHistoryUsers',
+        users: usersToBlock,
+      });
+      if (result?.success) {
+        if (result.queued > 0) {
+          showStatus(`已将 ${result.queued} 个用户加入拉黑队列`);
+        } else if (result.total > 0) {
+          showStatus('历史用户均已拉黑或正在处理中');
+        } else {
+          showStatus('暂无可拉黑的历史用户');
+        }
+      } else {
+        showStatus(result?.reason || '批量拉黑失败');
+      }
+    } catch {
+      showStatus('请求失败');
+    } finally {
+      blockAllHistoryBtn.disabled = false;
+      blockAllHistoryBtn.title = '拉黑列表';
+    }
+  });
+}
 
 if (toggleSearchBtn && historySearchContainer && historySearchInput) {
   toggleSearchBtn.addEventListener('click', () => {
@@ -918,20 +973,39 @@ if (toggleWhitelistSearchBtn && whitelistSearchContainer && whitelistSearchInput
 if (filterHistoryBtn && filterDropdown) {
   filterHistoryBtn.addEventListener('click', () => {
     filterDropdown.classList.toggle('open');
+    document.getElementById('moreDropdown')?.classList.remove('open');
   });
+
+  const moreActionsBtn = document.getElementById('moreActionsBtn');
+  const moreDropdown = document.getElementById('moreDropdown');
+  if (moreActionsBtn && moreDropdown) {
+    moreActionsBtn.addEventListener('click', () => {
+      moreDropdown.classList.toggle('open');
+      filterDropdown.classList.remove('open');
+    });
+  }
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#filterDropdown') && !e.target.closest('#filterHistoryBtn')) {
       filterDropdown.classList.remove('open');
     }
+    if (moreDropdown && !e.target.closest('#moreDropdown') && !e.target.closest('#moreActionsBtn')) {
+      moreDropdown.classList.remove('open');
+    }
+  });
+
+  moreDropdown?.addEventListener('click', (e) => {
+    if (e.target.closest('.dropdown-option')) {
+      moreDropdown.classList.remove('open');
+    }
   });
 
   filterDropdown.addEventListener('click', async (e) => {
-    const option = e.target.closest('.filter-option');
+    const option = e.target.closest('.dropdown-option');
     if (option) {
       const reason = option.dataset.reason;
       if (reason !== currentFilterReason) {
-        filterDropdown.querySelectorAll('.filter-option').forEach((opt) => {
+        filterDropdown.querySelectorAll('.dropdown-option').forEach((opt) => {
           opt.classList.remove('active');
         });
         option.classList.add('active');
@@ -970,13 +1044,13 @@ function updateFilterOptions() {
   }
 
   const allOption = document.createElement('div');
-  allOption.className = `filter-option ${currentFilterReason === 'all' ? 'active' : ''}`;
+  allOption.className = `dropdown-option ${currentFilterReason === 'all' ? 'active' : ''}`;
   allOption.dataset.reason = 'all';
   allOption.textContent = '全部原因';
 
   const optionNodes = reasons.map((reason) => {
     const opt = document.createElement('div');
-    opt.className = `filter-option ${currentFilterReason === reason ? 'active' : ''}`;
+    opt.className = `dropdown-option ${currentFilterReason === reason ? 'active' : ''}`;
     opt.dataset.reason = reason;
     opt.textContent = reason === '__blocked_on_x__' ? '已拉黑' : reason;
     return opt;

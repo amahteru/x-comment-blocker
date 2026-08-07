@@ -1,3 +1,5 @@
+export const browserApi = globalThis.browser ?? globalThis.chrome;
+
 export const CLOUD_KEYWORDS_API =
   'https://api.github.com/repos/ethanzhou-dev/x-comment-blocker/contents/keywords.txt';
 export const CLOUD_KEYWORDS_CDN =
@@ -68,12 +70,12 @@ export function parseKeywords(text) {
 }
 
 export async function syncCloudKeywords() {
-  const { cloudEnabled } = await chrome.storage.local.get(getStorageDefaults('cloudEnabled'));
+  const { cloudEnabled } = await browserApi.storage.local.get(getStorageDefaults('cloudEnabled'));
   if (!cloudEnabled) return false;
 
   try {
     const headers = { Accept: 'application/vnd.github.v3.raw' };
-    const { cloudETag } = await chrome.storage.local.get(getStorageDefaults('cloudETag'));
+    const { cloudETag } = await browserApi.storage.local.get(getStorageDefaults('cloudETag'));
     if (cloudETag) {
       headers['If-None-Match'] = cloudETag;
     }
@@ -108,7 +110,7 @@ export async function syncCloudKeywords() {
     }
 
     if (!isCDN && resp.status === 304) {
-      await chrome.storage.local.set({
+      await browserApi.storage.local.set({
         lastSyncTime: Temporal.Now.instant().epochMilliseconds,
         syncStatus: 'ok',
         syncError: '',
@@ -121,7 +123,7 @@ export async function syncCloudKeywords() {
 
     const cloudList = parseKeywords(text);
 
-    const storageItems = await chrome.storage.local.get(
+    const storageItems = await browserApi.storage.local.get(
       getStorageDefaults('disabledCloudKeywords', 'autoBlockKeywords', 'keywords', 'cloudKeywords'),
     );
 
@@ -131,7 +133,7 @@ export async function syncCloudKeywords() {
       console.log(
         `[X-Blocker] CDN cache (${cloudList.length} items) is older than local (${currentCloudList.length} items). Update aborted.`,
       );
-      await chrome.storage.local.set({
+      await browserApi.storage.local.set({
         lastSyncTime: Temporal.Now.instant().epochMilliseconds,
         syncStatus: 'ok',
         syncError: '',
@@ -153,7 +155,7 @@ export async function syncCloudKeywords() {
       .values()
       .toArray();
 
-    await chrome.storage.local.set({
+    await browserApi.storage.local.set({
       cloudKeywords: cloudList.join('\n'),
       disabledCloudKeywords: cleanedDisabled,
       autoBlockKeywords: cleanedAutoBlock,
@@ -165,7 +167,7 @@ export async function syncCloudKeywords() {
     return true;
   } catch (e) {
     const isTimeout = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError');
-    await chrome.storage.local
+    await browserApi.storage.local
       .set({
         syncStatus: 'error',
         syncError: isTimeout ? '同步超时，请检查网络' : '网络连接失败',

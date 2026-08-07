@@ -270,14 +270,6 @@
             gap: 8px;
             position: relative;
           ">
-        <button type="button" class="icon-btn" id="openWhitelistBtn" title="白名单">
-          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <polyline points="16 11 18 13 22 9"></polyline>
-          </svg>
-        </button>
         <button type="button" class="icon-btn" id="toggleSearchBtn" title="搜索屏蔽历史">
           <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -299,7 +291,35 @@
             <line x1="16" y1="18" x2="16" y2="22"></line>
           </svg>
         </button>
-        <div class="filter-dropdown" id="filterDropdown"></div>
+        <div class="dropdown-menu" id="filterDropdown" style="right: 60px;"></div>
+        <button type="button" class="icon-btn" id="moreActionsBtn" title="更多操作">
+          <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"></circle>
+            <circle cx="12" cy="5" r="1"></circle>
+            <circle cx="12" cy="19" r="1"></circle>
+          </svg>
+        </button>
+        <div class="dropdown-menu" id="moreDropdown" style="right: 28px; width: max-content;">
+          <button type="button" class="dropdown-option" id="openWhitelistBtn" style="justify-content: flex-start;">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <polyline points="16 11 18 13 22 9"></polyline>
+            </svg>
+            白名单
+          </button>
+          <button type="button" class="dropdown-option" id="blockAllHistoryBtn" style="justify-content: flex-start;">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+              <circle cx="12" cy="12" r="9"></circle>
+              <line x1="8" y1="8" x2="16" y2="16"></line>
+              <line x1="16" y1="8" x2="8" y2="16"></line>
+            </svg>
+            拉黑列表
+          </button>
+        </div>
         <button type="button" class="icon-btn history-close" id="closeHistory" title="关闭">
           <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

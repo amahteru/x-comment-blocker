@@ -822,7 +822,7 @@ body.disabled .settings-panel {
   background: rgb(239 68 68 / 10%);
 }
 
-.filter-dropdown {
+.dropdown-menu {
   display: none;
   position: absolute;
   top: 100%;
@@ -838,11 +838,11 @@ body.disabled .settings-panel {
   gap: 4px;
 }
 
-.filter-dropdown.open {
+.dropdown-menu.open {
   display: flex;
 }
 
-.filter-option {
+.dropdown-option {
   background: none;
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -858,12 +858,12 @@ body.disabled .settings-panel {
   white-space: nowrap;
 }
 
-.filter-option:hover {
+.dropdown-option:hover {
   color: var(--accent);
   border-color: var(--accent);
 }
 
-.filter-option.active {
+.dropdown-option.active {
   color: var(--accent);
   border-color: var(--accent);
   background: rgb(14 165 233 / 10%);
