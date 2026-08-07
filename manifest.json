@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "X(Twitter) Comment Blocker",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "minimum_chrome_version": "146",
   "description": "一键净化 X (Twitter) 评论区，自动屏蔽垃圾信息与引流机器人。",
   "icons": {
@@ -12,8 +12,18 @@
   "permissions": ["storage", "alarms", "contextMenus", "cookies"],
   "host_permissions": ["https://api.github.com/*", "*://*.twitter.com/*", "*://*.x.com/*"],
   "background": {
+    "scripts": ["background.js"],
     "service_worker": "background.js",
     "type": "module"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "x-comment-blocker@ethanzhou.dev",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
   },
   "action": {
     "default_popup": "popup.html",

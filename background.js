@@ -1,4 +1,5 @@
 import {
+  browserApi as chrome,
   extractCleanScreenName,
   getStorageDefaults,
   parseKeywords,
@@ -9,30 +10,11 @@ import {
 const ALARM_NAME = 'cloudKeywordSync';
 let isSyncing = false;
 
-class SyncLock {
-  constructor() {
-    isSyncing = true;
-  }
-  [Symbol.dispose]() {
-    isSyncing = false;
-  }
-}
-
 async function getAuthHeaders() {
   return {
     authorization:
       'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
   };
-}
-
-class ProcessingLock {
-  constructor(obj) {
-    this.obj = obj;
-    this.obj.isProcessing = true;
-  }
-  [Symbol.dispose]() {
-    this.obj.isProcessing = false;
-  }
 }
 
 class AsyncQueue {
@@ -46,15 +28,19 @@ class AsyncQueue {
   }
   async process() {
     if (this.isProcessing) return;
-    using _lock = new ProcessingLock(this);
+    this.isProcessing = true;
 
-    while (this.queue.length > 0) {
-      const task = this.queue.shift();
-      try {
-        await task();
-      } catch (e) {
-        console.error('[X-Blocker] Queue task error:', e);
+    try {
+      while (this.queue.length > 0) {
+        const task = this.queue.shift();
+        try {
+          await task();
+        } catch (e) {
+          console.error('[X-Blocker] Queue task error:', e);
+        }
       }
+    } finally {
+      this.isProcessing = false;
     }
   }
 }
@@ -88,10 +74,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 async function doSync() {
   if (isSyncing) return { success: false, reason: 'busy' };
-  using _lock = new SyncLock();
+  isSyncing = true;
 
-  const success = await syncCloudKeywords();
-  return { success };
+  try {
+    const success = await syncCloudKeywords();
+    return { success };
+  } finally {
+    isSyncing = false;
+  }
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -200,7 +190,7 @@ class AutoBlockManager {
 
   async process() {
     if (this.isProcessing) return;
-    using _lock = new ProcessingLock(this);
+    this.isProcessing = true;
 
     try {
       await this.init();
@@ -294,6 +284,8 @@ class AutoBlockManager {
       }
     } catch (e) {
       console.error('[X-Blocker] AutoBlockManager process error:', e);
+    } finally {
+      this.isProcessing = false;
     }
   }
 }

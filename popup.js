@@ -1,4 +1,5 @@
 import {
+  browserApi as chrome,
   extractCleanScreenName,
   getStorageDefaults,
   parseKeywords,

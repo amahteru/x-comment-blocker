@@ -1,6 +1,12 @@
 (async () => {
-  const { getStorageDefaults, parseKeywords, invisibleCharsRegex, extractCleanScreenName } =
-    await import(chrome.runtime.getURL('utils.js'));
+  const browserApi = globalThis.browser ?? globalThis.chrome;
+  const {
+    browserApi: chrome,
+    getStorageDefaults,
+    parseKeywords,
+    invisibleCharsRegex,
+    extractCleanScreenName,
+  } = await import(browserApi.runtime.getURL('utils.js'));
   let blockRegexes = [];
   let autoBlockRegexes = [];
   let lastKeywordsKey = '';
