@@ -869,6 +869,12 @@ body.disabled .settings-panel {
   background: rgb(14 165 233 / 10%);
 }
 
+.dropdown-option.danger-confirm:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: rgb(239 68 68 / 10%);
+}
+
 .history-search-container {
   display: none;
   padding: 12px 20px 0;
