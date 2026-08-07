@@ -881,8 +881,8 @@ if (blockAllHistoryBtn) {
       new Set(
         filteredHistory
           .map((item) => extractCleanScreenName(item.user))
-          .filter((name) => /^[a-zA-Z0-9_]{1,15}$/v.test(name))
-      )
+          .filter((name) => /^[a-zA-Z0-9_]{1,15}$/v.test(name)),
+      ),
     );
 
     if (usersToBlock.length === 0) {
@@ -892,7 +892,7 @@ if (blockAllHistoryBtn) {
 
     if (
       !confirm(
-        `【危险操作警告】\n此操作将会把当前列表中显示的 ${usersToBlock.length} 个历史用户批量添加到拉黑队列中。\n确定要继续吗？`
+        `【危险操作警告】\n此操作将会把当前列表中显示的 ${usersToBlock.length} 个历史用户批量添加到拉黑队列中。\n确定要继续吗？`,
       )
     ) {
       return;
@@ -989,7 +989,11 @@ if (filterHistoryBtn && filterDropdown) {
     if (!e.target.closest('#filterDropdown') && !e.target.closest('#filterHistoryBtn')) {
       filterDropdown.classList.remove('open');
     }
-    if (moreDropdown && !e.target.closest('#moreDropdown') && !e.target.closest('#moreActionsBtn')) {
+    if (
+      moreDropdown &&
+      !e.target.closest('#moreDropdown') &&
+      !e.target.closest('#moreActionsBtn')
+    ) {
       moreDropdown.classList.remove('open');
     }
   });
