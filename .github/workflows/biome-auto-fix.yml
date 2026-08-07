@@ -31,9 +31,11 @@ jobs:
           version: latest
 
       - name: Run Biome Auto Fix
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         run: biome check --write . || true
 
       - name: Commit fixes
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore: auto format and fix lint issues by Biome [skip ci]"
