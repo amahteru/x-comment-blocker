@@ -20,6 +20,11 @@ const ICON_CHECK =
 const ICON_BAN =
   '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>';
 
+function setSafeHtml(element, html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  element.replaceChildren(...doc.body.childNodes);
+}
+
 const keywordList = document.getElementById('keywordList');
 const keywordCount = document.getElementById('keywordCount');
 const autoBlockCount = document.getElementById('autoBlockCount');
@@ -880,7 +885,7 @@ if (blockAllHistoryBtn) {
 
   const resetBtnState = () => {
     isConfirmingBlockAll = false;
-    blockAllHistoryBtn.innerHTML = originalHtml;
+    setSafeHtml(blockAllHistoryBtn, originalHtml);
     blockAllHistoryBtn.classList.remove('danger-confirm');
   };
 
@@ -903,7 +908,7 @@ if (blockAllHistoryBtn) {
     if (!isConfirmingBlockAll) {
       e.stopPropagation();
       isConfirmingBlockAll = true;
-      blockAllHistoryBtn.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>确认拉黑(${usersToBlock.length})`;
+      setSafeHtml(blockAllHistoryBtn, `<svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>确认拉黑(${usersToBlock.length})`);
       blockAllHistoryBtn.classList.add('danger-confirm');
 
       blockAllConfirmTimer = setTimeout(resetBtnState, 3000);
@@ -1364,13 +1369,13 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
     const editBtn = document.createElement('button');
     editBtn.className = 'tag-btn tag-btn-edit';
     editBtn.title = '编辑';
-    editBtn.innerHTML = ICON_EDIT;
+    setSafeHtml(editBtn, ICON_EDIT);
     editBtn.onclick = () => startEditWhitelist(itemEl, handle);
 
     const delBtn = document.createElement('button');
     delBtn.className = 'tag-btn tag-btn-del';
     delBtn.title = '删除';
-    delBtn.innerHTML = ICON_DEL;
+    setSafeHtml(delBtn, ICON_DEL);
     delBtn.onclick = () => {
       itemEl.classList.remove('fade-in-tag');
       itemEl.classList.add('fade-out-tag');
@@ -1407,13 +1412,13 @@ function startEditWhitelist(tagEl, oldHandle) {
 
   const confirmBtn = document.createElement('button');
   confirmBtn.className = 'tag-btn tag-btn-save';
-  confirmBtn.innerHTML = ICON_CHECK;
+  setSafeHtml(confirmBtn, ICON_CHECK);
   confirmBtn.title = '确认';
   confirmBtn.onclick = () => confirmEditWhitelist(input, oldHandle);
 
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'tag-btn tag-btn-del';
-  cancelBtn.innerHTML = ICON_DEL;
+  setSafeHtml(cancelBtn, ICON_DEL);
   cancelBtn.title = '取消';
   cancelBtn.onclick = () => renderWhitelist();
 

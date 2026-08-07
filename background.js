@@ -47,15 +47,19 @@ class AsyncQueue {
   }
   async process() {
     if (this.isProcessing) return;
-    using _lock = new ProcessingLock(this);
+    const _lock = new ProcessingLock(this);
 
-    while (this.queue.length > 0) {
-      const task = this.queue.shift();
-      try {
-        await task();
-      } catch (e) {
-        console.error('[X-Blocker] Queue task error:', e);
+    try {
+      while (this.queue.length > 0) {
+        const task = this.queue.shift();
+        try {
+          await task();
+        } catch (e) {
+          console.error('[X-Blocker] Queue task error:', e);
+        }
       }
+    } finally {
+      _lock[Symbol.dispose]();
     }
   }
 }
@@ -89,10 +93,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 async function doSync() {
   if (isSyncing) return { success: false, reason: 'busy' };
-  using _lock = new SyncLock();
+  const _lock = new SyncLock();
 
-  const success = await syncCloudKeywords();
-  return { success };
+  try {
+    const success = await syncCloudKeywords();
+    return { success };
+  } finally {
+    _lock[Symbol.dispose]();
+  }
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -203,100 +211,104 @@ class AutoBlockManager {
 
   async process() {
     if (this.isProcessing) return;
-    using _lock = new ProcessingLock(this);
+    const _lock = new ProcessingLock(this);
 
     try {
-      await this.init();
+      try {
+        await this.init();
 
-      while (true) {
-        await this.refreshFromStorage();
-        await this.checkDailyReset();
+        while (true) {
+          await this.refreshFromStorage();
+          await this.checkDailyReset();
 
-        const now = Temporal.Now.instant();
-        if (this.pausedUntil > now.epochMilliseconds) {
-          const pausedUntilInstant = Temporal.Instant.fromEpochMilliseconds(this.pausedUntil);
-          console.warn(
-            `[X-Blocker] Auto block paused for ${Math.ceil(now.until(pausedUntilInstant).total('seconds'))}s.`,
-          );
-          break;
-        }
+          const now = Temporal.Now.instant();
+          if (this.pausedUntil > now.epochMilliseconds) {
+            const pausedUntilInstant = Temporal.Instant.fromEpochMilliseconds(this.pausedUntil);
+            console.warn(
+              `[X-Blocker] Auto block paused for ${Math.ceil(now.until(pausedUntilInstant).total('seconds'))}s.`,
+            );
+            break;
+          }
 
-        if (this.countToday >= this.dailyLimit) {
-          console.warn('[X-Blocker] Auto block daily limit reached.');
-          break;
-        }
+          if (this.countToday >= this.dailyLimit) {
+            console.warn('[X-Blocker] Auto block daily limit reached.');
+            break;
+          }
 
-        if (this.queue.length === 0) break;
+          if (this.queue.length === 0) break;
 
-        const currentItem = this.queue.at(0);
+          const currentItem = this.queue.at(0);
 
-        let outcome = null;
-        let failReason = '';
-        let pauseUntil = 0;
-        try {
-          const res = await handleBlockUser(currentItem, true);
-          if (res?.success) {
-            outcome = 'success';
-          } else if (
-            res?.reason &&
-            (res.reason.includes('429') || res.reason.includes('HTTP 429'))
-          ) {
-            outcome = 'rate-limited';
-            pauseUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
-          } else {
+          let outcome = null;
+          let failReason = '';
+          let pauseUntil = 0;
+          try {
+            const res = await handleBlockUser(currentItem, true);
+            if (res?.success) {
+              outcome = 'success';
+            } else if (
+              res?.reason &&
+              (res.reason.includes('429') || res.reason.includes('HTTP 429'))
+            ) {
+              outcome = 'rate-limited';
+              pauseUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
+            } else {
+              outcome = 'failed';
+              failReason = res?.reason ?? 'unknown';
+            }
+          } catch (e) {
+            console.error('[X-Blocker] Auto block task execution error:', e);
             outcome = 'failed';
-            failReason = res?.reason ?? 'unknown';
-          }
-        } catch (e) {
-          console.error('[X-Blocker] Auto block task execution error:', e);
-          outcome = 'failed';
-          failReason = 'task error';
-        }
-
-        const storageQueue =
-          (await chrome.storage.local.get('autoBlockQueue')).autoBlockQueue ?? [];
-        const queueUnchanged =
-          storageQueue.length === this.queue.length &&
-          storageQueue.every((item, index) => item === this.queue[index]);
-        if (!queueUnchanged) {
-          console.warn('[X-Blocker] Auto block queue changed externally, re-syncing.');
-          continue;
-        }
-
-        if (outcome === 'success') {
-          this.queue.shift();
-          this.countToday++;
-          this.blockedUsersSet.add(currentItem);
-
-          if (this.blockedUsersSet.size > 10000) {
-            const dropCount = this.blockedUsersSet.size - 10000;
-            this.blockedUsersSet = new Set(this.blockedUsersSet.values().drop(dropCount));
+            failReason = 'task error';
           }
 
-          await this.saveState({
-            autoBlockQueue: this.queue,
-            autoBlockToday: this.countToday,
-            blockedUsersOnX: this.blockedUsersSet.values().toArray(),
-          });
-        } else if (outcome === 'rate-limited') {
-          console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
-          this.pausedUntil = pauseUntil;
-          await this.saveState({ autoBlockPausedUntil: this.pausedUntil });
-          break;
-        } else {
-          console.error('[X-Blocker] Auto block failed for', currentItem, failReason);
-          this.queue.shift();
-          await this.saveState({ autoBlockQueue: this.queue });
-        }
+          const storageQueue =
+            (await chrome.storage.local.get('autoBlockQueue')).autoBlockQueue ?? [];
+          const queueUnchanged =
+            storageQueue.length === this.queue.length &&
+            storageQueue.every((item, index) => item === this.queue[index]);
+          if (!queueUnchanged) {
+            console.warn('[X-Blocker] Auto block queue changed externally, re-syncing.');
+            continue;
+          }
 
-        if (this.queue.length > 0) {
-          const delay =
-            Math.floor(Math.random() * (this.maxDelayMs - this.minDelayMs + 1)) + this.minDelayMs;
-          await new Promise((r) => setTimeout(r, delay));
+          if (outcome === 'success') {
+            this.queue.shift();
+            this.countToday++;
+            this.blockedUsersSet.add(currentItem);
+
+            if (this.blockedUsersSet.size > 10000) {
+              const dropCount = this.blockedUsersSet.size - 10000;
+              this.blockedUsersSet = new Set(this.blockedUsersSet.values().drop(dropCount));
+            }
+
+            await this.saveState({
+              autoBlockQueue: this.queue,
+              autoBlockToday: this.countToday,
+              blockedUsersOnX: this.blockedUsersSet.values().toArray(),
+            });
+          } else if (outcome === 'rate-limited') {
+            console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
+            this.pausedUntil = pauseUntil;
+            await this.saveState({ autoBlockPausedUntil: this.pausedUntil });
+            break;
+          } else {
+            console.error('[X-Blocker] Auto block failed for', currentItem, failReason);
+            this.queue.shift();
+            await this.saveState({ autoBlockQueue: this.queue });
+          }
+
+          if (this.queue.length > 0) {
+            const delay =
+              Math.floor(Math.random() * (this.maxDelayMs - this.minDelayMs + 1)) + this.minDelayMs;
+            await new Promise((r) => setTimeout(r, delay));
+          }
         }
+      } catch (e) {
+        console.error('[X-Blocker] AutoBlockManager process error:', e);
       }
-    } catch (e) {
-      console.error('[X-Blocker] AutoBlockManager process error:', e);
+    } finally {
+      _lock[Symbol.dispose]();
     }
   }
 }
