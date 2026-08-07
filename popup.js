@@ -905,7 +905,7 @@ if (blockAllHistoryBtn) {
       isConfirmingBlockAll = true;
       blockAllHistoryBtn.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>确认拉黑(${usersToBlock.length})`;
       blockAllHistoryBtn.classList.add('danger-confirm');
-      
+
       blockAllConfirmTimer = setTimeout(resetBtnState, 3000);
       return;
     }
