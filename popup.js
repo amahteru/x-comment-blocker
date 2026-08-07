@@ -862,6 +862,7 @@ let searchDebounceTimer = null;
 
 const filterHistoryBtn = document.getElementById('filterHistoryBtn');
 const filterDropdown = document.getElementById('filterDropdown');
+const blockAllHistoryBtn = document.getElementById('blockAllHistoryBtn');
 const toggleSearchBtn = document.getElementById('toggleSearchBtn');
 const historySearchContainer = document.getElementById('historySearchContainer');
 const historySearchInput = document.getElementById('historySearchInput');
@@ -871,6 +872,35 @@ const whitelistSearchContainer = document.getElementById('whitelistSearchContain
 const whitelistSearchInput = document.getElementById('whitelistSearchInput');
 let currentWhitelistSearchQuery = '';
 let whitelistSearchDebounceTimer = null;
+
+if (blockAllHistoryBtn) {
+  blockAllHistoryBtn.addEventListener('click', async () => {
+    if (blockAllHistoryBtn.disabled) return;
+
+    blockAllHistoryBtn.disabled = true;
+    blockAllHistoryBtn.title = '正在加入拉黑队列...';
+
+    try {
+      const result = await chrome.runtime.sendMessage({ action: 'blockAllHistoryUsers' });
+      if (result?.success) {
+        if (result.queued > 0) {
+          showStatus(`已将 ${result.queued} 个用户加入拉黑队列`);
+        } else if (result.total > 0) {
+          showStatus('历史用户均已拉黑或正在处理中');
+        } else {
+          showStatus('暂无可拉黑的历史用户');
+        }
+      } else {
+        showStatus(result?.reason || '批量拉黑失败');
+      }
+    } catch {
+      showStatus('请求失败');
+    } finally {
+      blockAllHistoryBtn.disabled = false;
+      blockAllHistoryBtn.title = '一键拉黑所有历史用户';
+    }
+  });
+}
 
 if (toggleSearchBtn && historySearchContainer && historySearchInput) {
   toggleSearchBtn.addEventListener('click', () => {

@@ -174,7 +174,7 @@ class AutoBlockManager {
   async enqueueBatch(screenNames) {
     await this.init();
     await this.refreshFromStorage();
-    if (!screenNames || screenNames.length === 0) return;
+    if (!screenNames || screenNames.length === 0) return 0;
 
     const validNames = Iterator.from(screenNames)
       .map(extractCleanScreenName)
@@ -186,6 +186,8 @@ class AutoBlockManager {
       await this.saveState({ autoBlockQueue: this.queue });
       this.process();
     }
+
+    return validNames.length;
   }
 
   async process() {
@@ -295,6 +297,18 @@ autoBlockManager.init().then(() => {
   autoBlockManager.process();
 });
 
+async function blockAllHistoryUsers() {
+  const items = await chrome.storage.local.get(getStorageDefaults('blockedHistory'));
+  const screenNames = new Set(
+    Iterator.from(items.blockedHistory ?? [])
+      .map((item) => extractCleanScreenName(item.user))
+      .filter((name) => /^[a-zA-Z0-9_]{1,15}$/v.test(name)),
+  );
+  const names = screenNames.values().toArray();
+  const queued = await autoBlockManager.enqueueBatch(names);
+  return { success: true, total: names.length, queued };
+}
+
 chrome.runtime.onMessage.addListener((message) => {
   if (message.action === 'syncNow') {
     return doSync();
@@ -304,6 +318,9 @@ chrome.runtime.onMessage.addListener((message) => {
   }
   if (message.action === 'unblockUserOnX') {
     return handleBlockUser(message.screenName, false);
+  }
+  if (message.action === 'blockAllHistoryUsers') {
+    return blockAllHistoryUsers();
   }
   if (message.action === 'recordSpam') {
     handleRecordSpam(message.items);
