@@ -310,7 +310,7 @@ class AutoBlockManager {
             console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
             this.pausedUntil = pauseUntil;
             this.batchCount = 0;
-            await this.saveState({ 
+            await this.saveState({
               autoBlockPausedUntil: this.pausedUntil,
               autoBlockBatchCount: this.batchCount,
             });
