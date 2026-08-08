@@ -133,13 +133,15 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 class AutoBlockManager {
   isProcessing = false;
-  dailyLimit = 150;
+  dailyLimit = 300;
+  batchLimit = 30;
   minDelayMs = 5000;
   maxDelayMs = 10000;
 
   queue = [];
   blockedUsersSet = new Set();
   countToday = 0;
+  batchCount = 0;
   lastDate = '';
   pausedUntil = 0;
   initialized = false;
@@ -150,9 +152,11 @@ class AutoBlockManager {
     if (this.lastDate !== today) {
       this.lastDate = today;
       this.countToday = 0;
+      this.batchCount = 0;
       await this.saveState({
         autoBlockLastDate: this.lastDate,
         autoBlockToday: this.countToday,
+        autoBlockBatchCount: this.batchCount,
       });
     }
   }
@@ -164,6 +168,7 @@ class AutoBlockManager {
         'autoBlockToday',
         'autoBlockLastDate',
         'autoBlockPausedUntil',
+        'autoBlockBatchCount',
         'blockedUsersOnX',
       ),
     );
@@ -172,6 +177,7 @@ class AutoBlockManager {
     this.countToday = items.autoBlockToday ?? 0;
     this.lastDate = items.autoBlockLastDate ?? '';
     this.pausedUntil = items.autoBlockPausedUntil ?? 0;
+    this.batchCount = items.autoBlockBatchCount ?? 0;
     this.blockedUsersSet = new Set(items.blockedUsersOnX ?? []);
   }
 
@@ -235,6 +241,17 @@ class AutoBlockManager {
             break;
           }
 
+          if (this.batchCount >= this.batchLimit) {
+            console.warn('[X-Blocker] Auto block batch limit reached. Pausing for 15 mins.');
+            this.pausedUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
+            this.batchCount = 0;
+            await this.saveState({
+              autoBlockPausedUntil: this.pausedUntil,
+              autoBlockBatchCount: this.batchCount,
+            });
+            break;
+          }
+
           if (this.queue.length === 0) break;
 
           const currentItem = this.queue.at(0);
@@ -275,6 +292,7 @@ class AutoBlockManager {
           if (outcome === 'success') {
             this.queue.shift();
             this.countToday++;
+            this.batchCount++;
             this.blockedUsersSet.add(currentItem);
 
             if (this.blockedUsersSet.size > 10000) {
@@ -285,12 +303,17 @@ class AutoBlockManager {
             await this.saveState({
               autoBlockQueue: this.queue,
               autoBlockToday: this.countToday,
+              autoBlockBatchCount: this.batchCount,
               blockedUsersOnX: this.blockedUsersSet.values().toArray(),
             });
           } else if (outcome === 'rate-limited') {
             console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
             this.pausedUntil = pauseUntil;
-            await this.saveState({ autoBlockPausedUntil: this.pausedUntil });
+            this.batchCount = 0;
+            await this.saveState({ 
+              autoBlockPausedUntil: this.pausedUntil,
+              autoBlockBatchCount: this.batchCount,
+            });
             break;
           } else {
             console.error('[X-Blocker] Auto block failed for', currentItem, failReason);

@@ -44,6 +44,7 @@ const STORAGE_DEFAULTS = {
   autoBlockToday: 0,
   autoBlockLastDate: '',
   autoBlockPausedUntil: 0,
+  autoBlockBatchCount: 0,
   whitelist: [],
 };
 
