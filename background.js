@@ -204,8 +204,8 @@ class AutoBlockManager {
     await this.refreshFromStorage();
     if (!screenNames || screenNames.length === 0) return 0;
 
-    const validNames = Iterator.from(screenNames)
-      .map(extractCleanScreenName)
+    const validNames = new Set(Iterator.from(screenNames).map(extractCleanScreenName))
+      .values()
       .filter(
         (name) =>
           name &&
