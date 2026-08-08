@@ -275,10 +275,7 @@ class AutoBlockManager {
             } else if (res?.status === 429) {
               outcome = 'rate-limited';
               pauseUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
-            } else if (
-              res?.permanent ||
-              (res?.status && res.status >= 400 && res.status < 500)
-            ) {
+            } else if (res?.permanent || (res?.status && res.status >= 400 && res.status < 500)) {
               outcome = 'failed';
               failReason = res?.reason ?? 'unknown';
             } else {
