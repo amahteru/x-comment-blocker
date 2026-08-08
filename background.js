@@ -131,6 +131,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+const MAX_BLOCK_RETRIES = 5;
+
 class AutoBlockManager {
   isProcessing = false;
   dailyLimit = 300;
@@ -140,6 +142,7 @@ class AutoBlockManager {
 
   queue = [];
   blockedUsersSet = new Set();
+  retryCounts = new Map();
   countToday = 0;
   batchCount = 0;
   lastDate = '';
@@ -203,7 +206,13 @@ class AutoBlockManager {
 
     const validNames = Iterator.from(screenNames)
       .map(extractCleanScreenName)
-      .filter((name) => name && !this.queue.includes(name) && !this.blockedUsersSet.has(name))
+      .filter(
+        (name) =>
+          name &&
+          /^[a-zA-Z0-9_]{1,15}$/v.test(name) &&
+          !this.queue.includes(name) &&
+          !this.blockedUsersSet.has(name),
+      )
       .toArray();
 
     if (validNames.length > 0) {
@@ -263,19 +272,22 @@ class AutoBlockManager {
             const res = await handleBlockUser(currentItem, true);
             if (res?.success) {
               outcome = 'success';
-            } else if (
-              res?.reason &&
-              (res.reason.includes('429') || res.reason.includes('HTTP 429'))
-            ) {
+            } else if (res?.status === 429) {
               outcome = 'rate-limited';
               pauseUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
-            } else {
+            } else if (
+              res?.permanent ||
+              (res?.status && res.status >= 400 && res.status < 500)
+            ) {
               outcome = 'failed';
+              failReason = res?.reason ?? 'unknown';
+            } else {
+              outcome = 'transient';
               failReason = res?.reason ?? 'unknown';
             }
           } catch (e) {
             console.error('[X-Blocker] Auto block task execution error:', e);
-            outcome = 'failed';
+            outcome = 'transient';
             failReason = 'task error';
           }
 
@@ -290,6 +302,7 @@ class AutoBlockManager {
           }
 
           if (outcome === 'success') {
+            this.retryCounts.delete(currentItem);
             this.queue.shift();
             this.countToday++;
             this.batchCount++;
@@ -310,12 +323,34 @@ class AutoBlockManager {
             console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
             this.pausedUntil = pauseUntil;
             this.batchCount = 0;
-            await this.saveState({ 
+            await this.saveState({
               autoBlockPausedUntil: this.pausedUntil,
               autoBlockBatchCount: this.batchCount,
             });
             break;
+          } else if (outcome === 'transient') {
+            const attempts = (this.retryCounts.get(currentItem) ?? 0) + 1;
+            this.retryCounts.set(currentItem, attempts);
+            if (attempts > MAX_BLOCK_RETRIES) {
+              console.error(
+                `[X-Blocker] Auto block giving up on ${currentItem} after ${attempts} attempts:`,
+                failReason,
+              );
+              this.queue.shift();
+              this.retryCounts.delete(currentItem);
+            } else {
+              console.warn(
+                `[X-Blocker] Auto block transient failure for ${currentItem}, retry ${attempts}/${MAX_BLOCK_RETRIES}:`,
+                failReason,
+              );
+              this.queue.push(this.queue.shift());
+              await new Promise((r) =>
+                setTimeout(r, Math.min(30_000, 5_000 * 2 ** (attempts - 1))),
+              );
+            }
+            await this.saveState({ autoBlockQueue: this.queue });
           } else {
+            this.retryCounts.delete(currentItem);
             console.error('[X-Blocker] Auto block failed for', currentItem, failReason);
             this.queue.shift();
             await this.saveState({ autoBlockQueue: this.queue });
@@ -369,7 +404,7 @@ chrome.runtime.onMessage.addListener((message) => {
     return handleBlockUser(message.screenName, false);
   }
   if (message.action === 'blockAllHistoryUsers') {
-    return blockAllHistoryUsers(message.users);
+    return storageQueue.enqueue(() => blockAllHistoryUsers(message.users));
   }
   if (message.action === 'recordSpam') {
     handleRecordSpam(message.items);
@@ -478,14 +513,14 @@ async function handleBlockUser(screenName, isBlock) {
   try {
     const cleanName = extractCleanScreenName(screenName);
     if (!cleanName) {
-      return { success: false, reason: '无效的用户名' };
+      return { success: false, reason: '无效的用户名', permanent: true };
     }
     const cookie = await chrome.cookies.get({
       url: 'https://x.com',
       name: 'ct0',
     });
     if (!cookie) {
-      return { success: false, reason: '无法获取身份凭证，请确保已登录 X' };
+      return { success: false, reason: '无法获取身份凭证，请确保已登录 X', permanent: true };
     }
 
     const endpoint = isBlock ? 'create.json' : 'destroy.json';
@@ -499,12 +534,27 @@ async function handleBlockUser(screenName, isBlock) {
       headers,
       credentials: 'include',
       body: `screen_name=${encodeURIComponent(cleanName)}`,
+      signal: AbortSignal.timeout(15000),
     });
 
     if (response.ok) {
+      try {
+        const data = await response.json();
+        if (data?.errors?.length > 0) {
+          const messages = data.errors
+            .map((e) => e.message)
+            .filter(Boolean)
+            .join('; ');
+          return { success: false, reason: `API 错误: ${messages}`, permanent: true };
+        }
+      } catch {}
       return { success: true, screenName: cleanName };
     } else {
-      return { success: false, reason: `请求失败: HTTP ${response.status}` };
+      return {
+        success: false,
+        reason: `请求失败: HTTP ${response.status}`,
+        status: response.status,
+      };
     }
   } catch (error) {
     return { success: false, reason: error instanceof Error ? error.message : String(error) };
