@@ -413,7 +413,7 @@
       };
     }
 
-    if (checkUsername && userName && matchesAutoBlocklist(cleanUserName)) {
+    if (checkUsername && userName && (matchesAutoBlocklist(cleanUserName) || matchesAutoBlocklist(userName) || matchesAutoBlocklist(stableHandle))) {
       return {
         isSpam: true,
         isAutoBlock: true,
@@ -435,7 +435,7 @@
       };
     }
 
-    if (checkUsername && userName && matchesBlocklist(cleanUserName)) {
+    if (checkUsername && userName && (matchesBlocklist(cleanUserName) || matchesBlocklist(userName) || matchesBlocklist(stableHandle))) {
       return {
         isSpam: true,
         isAutoBlock: false,
