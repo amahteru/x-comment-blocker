@@ -266,7 +266,10 @@
       if (currentNode.nodeType === Node.TEXT_NODE) {
         text += currentNode.textContent;
       } else if (currentNode.nodeType === Node.ELEMENT_NODE) {
-        if (currentNode.tagName.toLowerCase() === 'img' && currentNode.alt) {
+        const tagName = currentNode.tagName.toLowerCase();
+        if (['br', 'div', 'p'].includes(tagName)) {
+          if (text && !text.endsWith('\n')) text += '\n';
+        } else if (tagName === 'img' && currentNode.alt) {
           let altText = currentNode.alt;
           if (
             currentNode.src &&
