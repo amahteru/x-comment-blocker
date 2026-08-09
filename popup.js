@@ -703,21 +703,17 @@ if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
 
 if (selectAllCloudBtn) {
   selectAllCloudBtn.addEventListener('click', async () => {
-    const items = await chrome.storage.local.get(getStorageDefaults('cloudKeywords'));
-    let cloudList = parseKeywords(items.cloudKeywords);
+    const { cloudKeywords } = await chrome.storage.local.get(getStorageDefaults('cloudKeywords'));
+    const query = currentCloudSearchQuery;
 
-    if (currentCloudSearchQuery !== '') {
-      cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
-    }
+    const cloudList = parseKeywords(cloudKeywords).filter(kw => 
+      !query || kw.toLowerCase().includes(query)
+    );
 
-    if (cloudList.length === 0) return;
+    if (!cloudList.length) return;
 
     const allSelected = cloudList.every(kw => autoBlockKeywords.has(kw));
-    if (allSelected) {
-      cloudList.forEach(kw => autoBlockKeywords.delete(kw));
-    } else {
-      cloudList.forEach(kw => autoBlockKeywords.add(kw));
-    }
+    cloudList.forEach(kw => autoBlockKeywords[allSelected ? 'delete' : 'add'](kw));
     
     renderCloudKeywords();
   });
