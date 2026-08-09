@@ -1,9 +1,9 @@
 export const browserApi = globalThis.browser ?? globalThis.chrome;
 
 export const CLOUD_KEYWORDS_API =
-  'https://api.github.com/repos/ethanzhou-dev/x-comment-blocker/contents/keywords.txt';
+  'https://api.github.com/repos/amahteru/x-comment-blocker/contents/keywords.txt';
 export const CLOUD_KEYWORDS_CDN =
-  'https://fastly.jsdelivr.net/gh/ethanzhou-dev/x-comment-blocker@main/keywords.txt';
+  'https://fastly.jsdelivr.net/gh/amahteru/x-comment-blocker@main/keywords.txt';
 export const SYNC_INTERVAL_MINUTES = 360;
 export const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
 export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
