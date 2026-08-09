@@ -517,7 +517,7 @@ async function handleBlockUser(screenName, isBlock) {
       name: 'ct0',
     });
     if (!cookie) {
-      return { success: false, reason: '无法获取身份凭证，请确保已登录 X', permanent: true };
+      return { success: false, reason: '无法获取身份凭证，请确保已登录 X' };
     }
 
     const endpoint = isBlock ? 'create.json' : 'destroy.json';
