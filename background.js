@@ -114,13 +114,15 @@ chrome.runtime.onInstalled.addListener(async () => {
     periodInMinutes: 1,
   });
 
-  await chrome.contextMenus.removeAll();
-  chrome.contextMenus.create({
-    id: 'addToBlocklist',
-    title: '添加「%s」到屏蔽词',
-    contexts: ['selection'],
-    documentUrlPatterns: ['*://*.twitter.com/*', '*://*.x.com/*'],
-  });
+  if (chrome.contextMenus) {
+    await chrome.contextMenus.removeAll();
+    chrome.contextMenus.create({
+      id: 'addToBlocklist',
+      title: '添加「%s」到屏蔽词',
+      contexts: ['selection'],
+      documentUrlPatterns: ['*://*.twitter.com/*', '*://*.x.com/*'],
+    });
+  }
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -562,17 +564,19 @@ async function handleBlockUser(screenName, isBlock) {
   }
 }
 
-chrome.contextMenus.onClicked.addListener(async (info) => {
-  if (info.menuItemId === 'addToBlocklist' && info.selectionText) {
-    const inputKws = parseKeywords(info.selectionText);
-    if (inputKws.length === 0) return;
+if (chrome.contextMenus) {
+  chrome.contextMenus.onClicked.addListener(async (info) => {
+    if (info.menuItemId === 'addToBlocklist' && info.selectionText) {
+      const inputKws = parseKeywords(info.selectionText);
+      if (inputKws.length === 0) return;
 
-    const items = await chrome.storage.local.get(getStorageDefaults('keywords'));
-    const existing = parseKeywords(items.keywords);
-    const newKws = new Set(inputKws).difference(new Set(existing));
-    if (newKws.size > 0) {
-      existing.push(...newKws);
-      await chrome.storage.local.set({ keywords: existing.join('\n') });
+      const items = await chrome.storage.local.get(getStorageDefaults('keywords'));
+      const existing = parseKeywords(items.keywords);
+      const newKws = new Set(inputKws).difference(new Set(existing));
+      if (newKws.size > 0) {
+        existing.push(...newKws);
+        await chrome.storage.local.set({ keywords: existing.join('\n') });
+      }
     }
-  }
-});
+  });
+}
