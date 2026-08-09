@@ -706,15 +706,15 @@ if (selectAllCloudBtn) {
     const { cloudKeywords } = await chrome.storage.local.get(getStorageDefaults('cloudKeywords'));
     const query = currentCloudSearchQuery;
 
-    const cloudList = parseKeywords(cloudKeywords).filter(kw => 
-      !query || kw.toLowerCase().includes(query)
+    const cloudList = parseKeywords(cloudKeywords).filter(
+      (kw) => !query || kw.toLowerCase().includes(query),
     );
 
     if (!cloudList.length) return;
 
-    const allSelected = cloudList.every(kw => autoBlockKeywords.has(kw));
-    cloudList.forEach(kw => autoBlockKeywords[allSelected ? 'delete' : 'add'](kw));
-    
+    const allSelected = cloudList.every((kw) => autoBlockKeywords.has(kw));
+    cloudList.forEach((kw) => autoBlockKeywords[allSelected ? 'delete' : 'add'](kw));
+
     renderCloudKeywords();
   });
 }
