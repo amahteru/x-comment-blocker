@@ -78,6 +78,7 @@ const cloudSearchInput = document.getElementById('cloudSearchInput');
 
 const editCloudAutoBlockBtn = document.getElementById('editCloudAutoBlockBtn');
 const saveCloudAutoBlockBtn = document.getElementById('saveCloudAutoBlockBtn');
+const selectAllCloudBtn = document.getElementById('selectAllCloudBtn');
 let isEditingCloudAutoBlock = false;
 
 let currentCloudSearchQuery = '';
@@ -685,16 +686,40 @@ if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
     isEditingCloudAutoBlock = true;
     editCloudAutoBlockBtn.style.display = 'none';
     saveCloudAutoBlockBtn.style.display = 'inline-flex';
+    if (selectAllCloudBtn) selectAllCloudBtn.style.display = 'inline-flex';
     renderCloudKeywords();
   });
 
   saveCloudAutoBlockBtn.addEventListener('click', () => {
     isEditingCloudAutoBlock = false;
     saveCloudAutoBlockBtn.style.display = 'none';
+    if (selectAllCloudBtn) selectAllCloudBtn.style.display = 'none';
     editCloudAutoBlockBtn.style.display = 'inline-flex';
     autoSave();
     renderCloudKeywords();
     renderUserKeywords();
+  });
+}
+
+if (selectAllCloudBtn) {
+  selectAllCloudBtn.addEventListener('click', async () => {
+    const items = await chrome.storage.local.get(getStorageDefaults('cloudKeywords'));
+    let cloudList = parseKeywords(items.cloudKeywords);
+
+    if (currentCloudSearchQuery !== '') {
+      cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
+    }
+
+    if (cloudList.length === 0) return;
+
+    const allSelected = cloudList.every(kw => autoBlockKeywords.has(kw));
+    if (allSelected) {
+      cloudList.forEach(kw => autoBlockKeywords.delete(kw));
+    } else {
+      cloudList.forEach(kw => autoBlockKeywords.add(kw));
+    }
+    
+    renderCloudKeywords();
   });
 }
 
@@ -708,6 +733,7 @@ closeCloudBtn.addEventListener('click', () => {
   if (isEditingCloudAutoBlock) {
     isEditingCloudAutoBlock = false;
     saveCloudAutoBlockBtn.style.display = 'none';
+    if (selectAllCloudBtn) selectAllCloudBtn.style.display = 'none';
     editCloudAutoBlockBtn.style.display = 'inline-flex';
   }
   clearTimeout(cloudSearchDebounceTimer);
