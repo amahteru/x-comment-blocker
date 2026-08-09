@@ -712,13 +712,13 @@ if (selectAllCloudBtn) {
 
     if (cloudList.length === 0) return;
 
-    const allSelected = cloudList.every(kw => autoBlockKeywords.has(kw));
+    const allSelected = cloudList.every((kw) => autoBlockKeywords.has(kw));
     if (allSelected) {
-      cloudList.forEach(kw => autoBlockKeywords.delete(kw));
+      cloudList.forEach((kw) => autoBlockKeywords.delete(kw));
     } else {
-      cloudList.forEach(kw => autoBlockKeywords.add(kw));
+      cloudList.forEach((kw) => autoBlockKeywords.add(kw));
     }
-    
+
     renderCloudKeywords();
   });
 }
