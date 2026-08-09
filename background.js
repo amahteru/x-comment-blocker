@@ -542,7 +542,11 @@ async function handleBlockUser(screenName, isBlock) {
             .map((e) => e.message)
             .filter(Boolean)
             .join('; ');
-          return { success: false, reason: `API 错误: ${messages}`, permanent: true };
+          const PERMANENT_ERROR_CODES = new Set([34, 50, 63]);
+          const isPermanent = data.errors.every(
+            (e) => typeof e.code === 'number' && PERMANENT_ERROR_CODES.has(e.code),
+          );
+          return { success: false, reason: `API 错误: ${messages}`, permanent: isPermanent };
         }
       } catch {}
       return { success: true, screenName: cleanName };
