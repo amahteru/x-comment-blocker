@@ -52,6 +52,12 @@
 3. 开启页面右上角的 **开发者模式**。
 4. 点击 **加载已解压的扩展程序**，选择下载的 `x-comment-blocker` 文件夹。
 
+### 4. 油猴脚本版本 (Tampermonkey / Greasemonkey)
+
+轻量级的用户脚本版本，适用于移动端浏览器（如Safari、Via）或免扩展环境：
+
+[X(Twitter) Comment Blocker Lite - GitHub](https://github.com/amahteru/x-comment-blocker-lite)
+
 ## 使用
 
 - **全局控制**：点击扩展图标，通过右上角开关启用或关闭插件。
