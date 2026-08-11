@@ -1,6 +1,6 @@
 # Privacy Policy / 隐私权政策
 
-**Last updated: July 2026**
+**Last updated: August 2026**
 
 ## 1. Information Collection / 信息收集
 
