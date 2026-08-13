@@ -43,7 +43,23 @@
   function buildTrieRegex(plainKeywords) {
     if (plainKeywords.length === 0) return null;
 
-    const metaChars = new Set(['.', '*', '+', '?', '(', ')', '[', ']', '{', '}', '|', '\\', '^', '$', '/']);
+    const metaChars = new Set([
+      '.',
+      '*',
+      '+',
+      '?',
+      '(',
+      ')',
+      '[',
+      ']',
+      '{',
+      '}',
+      '|',
+      '\\',
+      '^',
+      '$',
+      '/',
+    ]);
     function escapeChar(ch) {
       return metaChars.has(ch) ? `\\${ch}` : ch;
     }
