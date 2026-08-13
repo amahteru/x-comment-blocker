@@ -42,28 +42,31 @@
 
   function buildTrieRegex(plainKeywords) {
     if (!plainKeywords?.length) return null;
-
     const root = {};
     const END = Symbol();
     for (const kw of plainKeywords) {
       let node = root;
-      for (const ch of kw.toLowerCase()) node = node[ch] ??= {};
+      for (const ch of kw) node = node[ch] ??= {};
       node[END] = true;
     }
-
-    const escapeRegex = (c) => (/[.*+?^${}()|[\]\\]/.test(c) ? `\\${c}` : c);
-
-    const serialize = (node) => {
-      const keys = Object.keys(node);
-      if (!keys.length) return '';
-      let p = keys.map((k) => escapeRegex(k) + serialize(node[k])).join('|');
-      p = keys.length > 1 ? `(?:${p})` : p;
-      return node[END] ? `(?:${p})?` : p;
-    };
-
     const keys = Object.keys(root);
     if (!keys.length) return null;
-    return new RegExp(serialize(root), 'iu');
+
+    const escapeRegex = (c) => (/[.*+?^${}()|[\]\\]/.test(c) ? `\\${c}` : c);
+    const queue = [root];
+    for (const node of queue) {
+      for (const k of Object.keys(node)) queue.push(node[k]);
+    }
+
+    const RES = Symbol();
+    for (let i = queue.length - 1; i >= 0; i--) {
+      const node = queue[i];
+      const childKeys = Object.keys(node);
+      let p = childKeys.map((k) => escapeRegex(k) + node[k][RES]).join('|');
+      if (childKeys.length > 1) p = `(?:${p})`;
+      node[RES] = childKeys.length ? (node[END] ? `(?:${p})?` : p) : '';
+    }
+    return new RegExp(root[RES], 'iu');
   }
 
   async function mergeKeywords() {
