@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 ![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)
-![Firefox Add-on](https://img.shields.io/badge/Firefox-Add--on-FF7139?logo=firefoxbrowser&logoColor=white)
+[![Firefox Add-on](https://img.shields.io/badge/Firefox-Add--on-FF7139?logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/addon/x-twitter-comment-blocker/)
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-brightgreen.svg)
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/gagacedifiphcndckimeihhcbcclkach.svg)](https://chromewebstore.google.com/detail/xtwitter-comment-blocker/gagacedifiphcndckimeihhcbcclkach)
 
@@ -33,15 +33,10 @@
 您可以在 Chrome 应用商店获取最新版本：
 [X(Twitter) Comment Blocker - Chrome 应用商店](https://chromewebstore.google.com/detail/xtwitter-comment-blocker/gagacedifiphcndckimeihhcbcclkach)
 
-### 2. 在 Firefox 中临时安装
+### 2. 从 Firefox Add-ons 安装
 
-需要 Firefox 142 或更高版本。
-
-1. 下载或克隆本项目代码。
-2. 打开 `about:debugging#/runtime/this-firefox`。
-3. 点击 **临时载入附加组件**，选择项目目录中的 `manifest.json`。
-
-临时安装会在 Firefox 退出后失效。长期安装需要使用经 Mozilla 签名的版本。
+您可以在 Firefox Add-ons 获取最新版本：
+[X(Twitter) Comment Blocker - Firefox Add-ons](https://addons.mozilla.org/addon/x-twitter-comment-blocker/)
 
 ### 3. 在 Chromium 浏览器中手动安装
 
