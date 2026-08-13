@@ -63,8 +63,8 @@
       const node = queue[i];
       const childKeys = Object.keys(node);
       let p = childKeys.map((k) => escapeRegex(k) + node[k][RES]).join('|');
-      if (childKeys.length > 1) p = `(?:${p})`;
-      node[RES] = childKeys.length ? (node[END] ? `(?:${p})?` : p) : '';
+      if (p && (childKeys.length > 1 || node[END])) p = `(?:${p})${node[END] ? '?' : ''}`;
+      node[RES] = p;
     }
     return new RegExp(root[RES], 'iu');
   }
