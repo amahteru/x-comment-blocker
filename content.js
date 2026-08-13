@@ -41,55 +41,30 @@
   }
 
   function buildTrieRegex(plainKeywords) {
-    if (plainKeywords.length === 0) return null;
+    if (!plainKeywords?.length) return null;
 
-    const metaChars = new Set(['.', '*', '+', '?', '(', ')', '[', ']', '{', '}', '|', '\\', '^', '$', '/']);
-    function escapeChar(ch) {
-      return metaChars.has(ch) ? `\\${ch}` : ch;
-    }
+    const root = {};
+    const END = Symbol();
 
-    const END = Symbol('end');
-    const root = Object.create(null);
     for (const kw of plainKeywords) {
       let node = root;
-      for (const ch of kw.toLowerCase()) {
-        node[ch] ??= Object.create(null);
-        node = node[ch];
-      }
+      for (const ch of kw.toLowerCase()) node = node[ch] ??= {};
       node[END] = true;
     }
 
-    function serialize(node) {
+    const escape = (c) => (/[.*+?^${}()|[\]\\]/.test(c) ? `\\${c}` : c);
+
+    const serialize = (node) => {
       const keys = Object.keys(node);
-      if (keys.length === 0) return '';
+      if (!keys.length) return '';
+      let p = keys.map((k) => escape(k) + serialize(node[k])).join('|');
+      p = keys.length > 1 ? `(?:${p})` : p;
+      return node[END] ? `(?:${p})?` : p;
+    };
 
-      const isEnd = node[END] === true;
-      let suffix;
-
-      if (keys.length === 1) {
-        const ch = keys[0];
-        const childSuffix = serialize(node[ch]);
-        suffix = escapeChar(ch) + childSuffix;
-
-        if (isEnd) {
-          suffix = childSuffix === '' ? `${suffix}?` : `(?:${suffix})?`;
-        }
-      } else {
-        const branches = keys.map((ch) => escapeChar(ch) + serialize(node[ch]));
-        suffix = `(?:${branches.join('|')})`;
-        if (isEnd) suffix += '?';
-      }
-
-      return suffix;
-    }
-
-    const rootKeys = Object.keys(root);
-    if (rootKeys.length === 0) return null;
-
-    const branches = rootKeys.map((ch) => escapeChar(ch) + serialize(root[ch]));
-    const pattern = branches.length === 1 ? branches[0] : branches.join('|');
-
-    return new RegExp(pattern, 'i');
+    const keys = Object.keys(root);
+    if (!keys.length) return null;
+    return new RegExp(keys.map((k) => escape(k) + serialize(root[k])).join('|'), 'i');
   }
 
   async function mergeKeywords() {
