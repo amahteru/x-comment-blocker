@@ -40,6 +40,58 @@
     return autoBlockRegexes.some((regex) => regex.test(text));
   }
 
+  function buildTrieRegex(plainKeywords) {
+    if (plainKeywords.length === 0) return null;
+
+    const metaChars = new Set(['.', '*', '+', '?', '(', ')', '[', ']', '{', '}', '|', '\\', '^', '$', '/']);
+    function escapeChar(ch) {
+      return metaChars.has(ch) ? `\\${ch}` : ch;
+    }
+
+    const END = Symbol('end');
+    const root = Object.create(null);
+    for (const kw of plainKeywords) {
+      let node = root;
+      for (const ch of kw.toLowerCase()) {
+        node[ch] ??= Object.create(null);
+        node = node[ch];
+      }
+      node[END] = true;
+    }
+
+    function serialize(node) {
+      const keys = Object.keys(node);
+      if (keys.length === 0) return '';
+
+      const isEnd = node[END] === true;
+      let suffix;
+
+      if (keys.length === 1) {
+        const ch = keys[0];
+        const childSuffix = serialize(node[ch]);
+        suffix = escapeChar(ch) + childSuffix;
+
+        if (isEnd) {
+          suffix = childSuffix === '' ? `${suffix}?` : `(?:${suffix})?`;
+        }
+      } else {
+        const branches = keys.map((ch) => escapeChar(ch) + serialize(node[ch]));
+        suffix = `(?:${branches.join('|')})`;
+        if (isEnd) suffix += '?';
+      }
+
+      return suffix;
+    }
+
+    const rootKeys = Object.keys(root);
+    if (rootKeys.length === 0) return null;
+
+    const branches = rootKeys.map((ch) => escapeChar(ch) + serialize(root[ch]));
+    const pattern = branches.length === 1 ? branches[0] : branches.join('|');
+
+    return new RegExp(pattern, 'i');
+  }
+
   async function mergeKeywords() {
     try {
       const items = await chrome.storage.local.get(
@@ -96,12 +148,8 @@
 
         const regexes = [];
         if (plainKeywords.length > 0) {
-          const escaped = plainKeywords.map(RegExp.escape).toSorted((a, b) => b.length - a.length);
-          const CHUNK_SIZE = 400;
-          for (let i = 0; i < escaped.length; i += CHUNK_SIZE) {
-            const chunk = escaped.slice(i, i + CHUNK_SIZE);
-            regexes.push(new RegExp(chunk.join('|'), 'i'));
-          }
+          const trieRegex = buildTrieRegex(plainKeywords);
+          if (trieRegex) regexes.push(trieRegex);
         }
         if (customRegexes.length > 0) {
           regexes.push(...customRegexes);
