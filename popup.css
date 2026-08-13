@@ -19,7 +19,8 @@
 }
 
 body {
-  width: 340px;
+  width: 100%;
+  min-width: 340px;
   padding: 20px;
   background-color: var(--bg);
   color: var(--text);

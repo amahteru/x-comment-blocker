@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "X(Twitter) Comment Blocker",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "minimum_chrome_version": "146",
   "description": "一键净化 X (Twitter) 评论区，自动屏蔽垃圾信息与引流机器人。",
   "icons": {
@@ -27,7 +27,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "设置屏蔽词",
+    "default_title": "X(Twitter) Comment Blocker",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png"
