@@ -33,7 +33,7 @@
 您可以在 Chrome 应用商店获取最新版本：
 [X(Twitter) Comment Blocker - Chrome 应用商店](https://chromewebstore.google.com/detail/xtwitter-comment-blocker/gagacedifiphcndckimeihhcbcclkach)
 
-### 2. 从 Firefox Add-ons 安装
+### 2. 从 Firefox Add-ons 安装（适用于 Firefox 桌面版及 Android 移动版）
 
 您可以在 Firefox Add-ons 获取最新版本：
 [X(Twitter) Comment Blocker - Firefox Add-ons](https://addons.mozilla.org/addon/x-twitter-comment-blocker/)
