@@ -51,12 +51,12 @@
       node[END] = true;
     }
 
-    const escape = (c) => (/[.*+?^${}()|[\]\\]/.test(c) ? `\\${c}` : c);
+    const escapeRegex = (c) => (/[.*+?^${}()|[\]\\]/.test(c) ? `\\${c}` : c);
 
     const serialize = (node) => {
       const keys = Object.keys(node);
       if (!keys.length) return '';
-      let p = keys.map((k) => escape(k) + serialize(node[k])).join('|');
+      let p = keys.map((k) => escapeRegex(k) + serialize(node[k])).join('|');
       p = keys.length > 1 ? `(?:${p})` : p;
       return node[END] ? `(?:${p})?` : p;
     };

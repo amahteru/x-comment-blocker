@@ -220,23 +220,6 @@ body {
   box-sizing: border-box;
 }
 
-.keyword-tag.regex-tag {
-  background: #2e213c;
-  border-color: #523073;
-}
-
-.keyword-tag.regex-tag:hover {
-  border-color: #a855f7;
-}
-
-.keyword-tag.regex-tag .tag-text {
-  color: var(--text);
-}
-
-.keyword-tag.regex-tag .tag-btn-edit:hover {
-  color: #c084fc;
-  background: rgb(192 132 252 / 12%);
-}
 .keyword-tag.fade-out-tag {
   animation: fade-out 0.2s ease forwards;
 }
@@ -273,20 +256,6 @@ body {
 
 .keyword-tag.is-disabled {
   opacity: 0.5;
-}
-
-.keyword-tag.is-autoblock {
-  border-color: #6e2a2b;
-  background: #381f21;
-}
-
-.keyword-tag.is-autoblock:hover {
-  border-color: #eb4747;
-}
-
-.keyword-tag.is-autoblock .tag-btn-edit:hover {
-  color: var(--danger);
-  background: rgb(239 68 68 / 12%);
 }
 
 .keyword-tag .tag-checkbox {
@@ -359,6 +328,38 @@ body {
 
 .keyword-tag .tag-btn-save:hover {
   background: rgb(34 197 94 / 12%);
+}
+
+.keyword-tag.is-autoblock {
+  border-color: #6e2a2b;
+  background: #381f21;
+}
+
+.keyword-tag.is-autoblock:hover {
+  border-color: #eb4747;
+}
+
+.keyword-tag.is-autoblock .tag-btn-edit:hover {
+  color: var(--danger);
+  background: rgb(239 68 68 / 12%);
+}
+
+.keyword-tag.regex-tag {
+  background: #2e213c;
+  border-color: #523073;
+}
+
+.keyword-tag.regex-tag:hover {
+  border-color: #a855f7;
+}
+
+.keyword-tag.regex-tag .tag-text {
+  color: var(--text);
+}
+
+.keyword-tag.regex-tag .tag-btn-edit:hover {
+  color: #c084fc;
+  background: rgb(192 132 252 / 12%);
 }
 
 .control-group,
@@ -518,9 +519,9 @@ body {
   gap: 8px;
 }
 
-.control-group label svg,
 .section-label svg,
-.settings-title svg {
+.settings-title svg,
+.control-group label svg {
   position: relative;
   top: 1px;
 }

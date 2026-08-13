@@ -713,7 +713,9 @@ if (selectAllCloudBtn) {
     if (!cloudList.length) return;
 
     const allSelected = cloudList.every((kw) => autoBlockKeywords.has(kw));
-    cloudList.forEach((kw) => autoBlockKeywords[allSelected ? 'delete' : 'add'](kw));
+    cloudList.forEach((kw) => {
+      autoBlockKeywords[allSelected ? 'delete' : 'add'](kw);
+    });
 
     renderCloudKeywords();
   });
@@ -1530,7 +1532,9 @@ chrome.storage.onChanged.addListener((changes, area) => {
         (btn) => btn.dataset.screenName,
       ),
     );
-    screenNames.forEach((name) => updateBlockBtns(name));
+    screenNames.forEach((name) => {
+      updateBlockBtns(name);
+    });
   }
   if (changes.blockedHistory && historyModal.classList.contains('open')) {
     const newHistory = changes.blockedHistory.newValue || [];
