@@ -63,7 +63,7 @@
 
     const keys = Object.keys(root);
     if (!keys.length) return null;
-    return new RegExp(keys.map((k) => escapeRegex(k) + serialize(root[k])).join('|'), 'i');
+    return new RegExp(serialize(root), 'iu');
   }
 
   async function mergeKeywords() {
