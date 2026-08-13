@@ -45,7 +45,6 @@
 
     const root = {};
     const END = Symbol();
-
     for (const kw of plainKeywords) {
       let node = root;
       for (const ch of kw.toLowerCase()) node = node[ch] ??= {};
