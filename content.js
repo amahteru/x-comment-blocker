@@ -43,10 +43,11 @@
   function buildTrieRegex(plainKeywords) {
     if (!plainKeywords?.length) return null;
     const seen = new Set();
+    const MAX_KEYWORD_LENGTH = 1000;
     for (const kw of plainKeywords) {
       if (typeof kw !== 'string') continue;
       const cleaned = kw.trim().toLowerCase();
-      if (cleaned) seen.add(cleaned);
+      if (cleaned && cleaned.length <= MAX_KEYWORD_LENGTH) seen.add(cleaned);
     }
     if (!seen.size) return null;
     const sorted = Array.from(seen).sort((a, b) => a.length - b.length);
@@ -55,7 +56,6 @@
     for (const kw of sorted) {
       if (!pruned.some((p) => kw.includes(p))) pruned.push(kw);
     }
-    if (!pruned.length) return null;
 
     const root = {};
     for (const kw of pruned) {
