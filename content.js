@@ -42,37 +42,36 @@
 
   function buildTrieRegex(plainKeywords) {
     if (!plainKeywords?.length) return null;
-    const root = {};
-    const END = Symbol();
-    let validKeywordCount = 0;
+    const seen = new Set();
     for (const kw of plainKeywords) {
       if (typeof kw !== 'string') continue;
       const cleaned = kw.trim().toLowerCase();
-      if (!cleaned) continue;
+      if (cleaned) seen.add(cleaned);
+    }
+    if (!seen.size) return null;
+    const sorted = Array.from(seen).sort((a, b) => a.length - b.length);
+
+    const pruned = [];
+    for (const kw of sorted) {
+      if (!pruned.some((p) => kw.includes(p))) pruned.push(kw);
+    }
+    if (!pruned.length) return null;
+
+    const root = {};
+    for (const kw of pruned) {
       let node = root;
-      for (const ch of cleaned) node = node[ch] ??= {};
-      node[END] = true;
-      validKeywordCount++;
-    }
-    if (validKeywordCount === 0) return null;
-    const keys = Object.keys(root);
-    if (!keys.length) return null;
-
-    const escapeRegex = (c) => (/[.*+?^${}()|[\]\\]/.test(c) ? `\\${c}` : c);
-    const queue = [root];
-    for (const node of queue) {
-      for (const k of Object.keys(node)) queue.push(node[k]);
+      for (const ch of kw) node = node[ch] ??= {};
     }
 
-    const RES = Symbol();
-    for (let i = queue.length - 1; i >= 0; i--) {
-      const node = queue[i];
-      const childKeys = Object.keys(node);
-      let p = childKeys.map((k) => escapeRegex(k) + node[k][RES]).join('|');
-      if (p && (childKeys.length > 1 || node[END])) p = `(?:${p})${node[END] ? '?' : ''}`;
-      node[RES] = p;
+    const escapeChar = (c) => (/[.*+?^${}()|[\]\\]/.test(c) ? `\\${c}` : c);
+    function stringify(node) {
+      const keys = Object.keys(node);
+      if (!keys.length) return '';
+      const branches = keys.map((k) => escapeChar(k) + stringify(node[k]));
+      return branches.length > 1 ? `(?:${branches.join('|')})` : branches[0];
     }
-    return new RegExp(root[RES], 'iu');
+
+    return new RegExp(stringify(root), 'iu');
   }
 
   async function mergeKeywords() {
