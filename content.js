@@ -44,11 +44,17 @@
     if (!plainKeywords?.length) return null;
     const root = {};
     const END = Symbol();
+    let validKeywordCount = 0;
     for (const kw of plainKeywords) {
+      if (typeof kw !== 'string') continue;
+      const cleaned = kw.trim().toLowerCase();
+      if (!cleaned) continue;
       let node = root;
-      for (const ch of kw) node = node[ch] ??= {};
+      for (const ch of cleaned) node = node[ch] ??= {};
       node[END] = true;
+      validKeywordCount++;
     }
+    if (validKeywordCount === 0) return null;
     const keys = Object.keys(root);
     if (!keys.length) return null;
 
