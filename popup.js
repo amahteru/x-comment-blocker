@@ -1320,12 +1320,6 @@ function renderHistoryPage() {
   }
   historyList.appendChild(fragment);
 
-  Iterator.from(historyList.querySelectorAll('.history-display-name'))
-    .filter((span) => span.scrollWidth > span.clientWidth)
-    .forEach((span) => {
-      span.classList.add('is-overflowing');
-    });
-
   historyNextIndex = end;
   isHistoryLoading = false;
 }

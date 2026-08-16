@@ -722,13 +722,9 @@ body {
 .history-display-name {
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: clip;
+  text-overflow: ellipsis;
   flex-shrink: 1;
-}
-
-.history-display-name.is-overflowing {
-  -webkit-mask-image: linear-gradient(to left, transparent 0, black 12px);
-  mask-image: linear-gradient(to left, transparent 0, black 12px);
+  min-width: 0;
 }
 
 .history-handle {
