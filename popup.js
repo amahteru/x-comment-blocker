@@ -843,9 +843,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   userKeywords = parseKeywords(items.keywords);
   const rawAutoBlockKeywords = items.autoBlockKeywords ?? [];
 
-  const allValidKeywordsSet = new Set(
-    Iterator.concat(userKeywords, parseKeywords(items.cloudKeywords || '')),
-  );
+  const allValidKeywordsSet = new Set([
+    ...userKeywords,
+    ...parseKeywords(items.cloudKeywords || ''),
+  ]);
   autoBlockKeywords = new Set(rawAutoBlockKeywords).intersection(allValidKeywordsSet);
   if (rawAutoBlockKeywords.length !== autoBlockKeywords.size) {
     await chrome.storage.local.set({ autoBlockKeywords: autoBlockKeywords.values().toArray() });

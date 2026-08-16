@@ -95,7 +95,7 @@
             .toArray()
         : [];
 
-      const blockKeywordsSet = new Set(Iterator.concat(cloudKws, userKws));
+      const blockKeywordsSet = new Set([...cloudKws, ...userKws]);
       const blockKeywords = blockKeywordsSet.values().toArray();
       const rawAutoBlockKws = items.autoBlockKeywords ?? [];
       const autoBlockKws = new Set(rawAutoBlockKws)

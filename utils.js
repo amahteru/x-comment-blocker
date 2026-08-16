@@ -150,7 +150,7 @@ export async function syncCloudKeywords() {
       .intersection(cloudListSet)
       .values()
       .toArray();
-    const allValidKeywordsSet = new Set(Iterator.concat(userKws, cloudListSet));
+    const allValidKeywordsSet = new Set([...userKws, ...cloudListSet]);
     const cleanedAutoBlock = new Set(autoBlockKeywords)
       .intersection(allValidKeywordsSet)
       .values()
