@@ -71,7 +71,7 @@ let inMemoryHistory = null;
 let inMemoryBlockedCount = null;
 let pendingSpamBatch = [];
 let spamBatchTimer = null;
-let currentWriteRevision = 0;
+const currentSessionToken = crypto.randomUUID();
 
 function syncGlobalSpamCache() {
   globalSpamCache.clear();
@@ -83,12 +83,18 @@ function syncGlobalSpamCache() {
 }
 
 const initHistoryPromise = storageQueue.enqueue(async () => {
-  const items = await chrome.storage.local.get(
-    getStorageDefaults('blockedCount', 'blockedHistory'),
-  );
-  inMemoryHistory = items.blockedHistory ?? [];
-  inMemoryBlockedCount = items.blockedCount ?? 0;
-  syncGlobalSpamCache();
+  try {
+    const items = await chrome.storage.local.get(
+      getStorageDefaults('blockedCount', 'blockedHistory'),
+    );
+    inMemoryHistory = items.blockedHistory ?? [];
+    inMemoryBlockedCount = items.blockedCount ?? 0;
+    syncGlobalSpamCache();
+  } catch (e) {
+    console.error('[X-Blocker] Init history error:', e);
+    inMemoryHistory ??= [];
+    inMemoryBlockedCount ??= 0;
+  }
 });
 
 async function ensureHistoryInitialized() {
@@ -98,12 +104,11 @@ async function ensureHistoryInitialized() {
 }
 
 async function saveHistoryState() {
-  const rev = ++currentWriteRevision;
   try {
     await chrome.storage.local.set({
       blockedCount: inMemoryBlockedCount,
       blockedHistory: inMemoryHistory,
-      _historyRev: rev,
+      _historyRev: currentSessionToken,
     });
   } catch (e) {
     console.error('[X-Blocker] saveHistoryState error:', e);
@@ -113,7 +118,7 @@ async function saveHistoryState() {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
 
-  if (changes._historyRev && changes._historyRev.newValue <= currentWriteRevision) {
+  if (changes._historyRev && changes._historyRev.newValue === currentSessionToken) {
     return;
   }
 
@@ -417,6 +422,9 @@ async function blockAllHistoryUsers(usersToBlock = null) {
     names = usersToBlock;
   } else {
     await ensureHistoryInitialized();
+    if (pendingSpamBatch.length > 0) {
+      await flushSpamBatch();
+    }
     const screenNames = new Set(
       Iterator.from(inMemoryHistory ?? [])
         .map((item) => extractCleanScreenName(item.user))
@@ -493,7 +501,9 @@ function handleRemoveSpamRecord(id, time) {
     await ensureHistoryInitialized();
 
     const originalLength = inMemoryHistory.length;
-    inMemoryHistory = inMemoryHistory.filter((item) => !(item.id === id && item.time === time));
+    inMemoryHistory = inMemoryHistory.filter(
+      (item) => !(item.id === id && (!time || item.time === time)),
+    );
 
     const removedCount = originalLength - inMemoryHistory.length;
     if (removedCount > 0) {
