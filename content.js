@@ -609,7 +609,7 @@
 
         if (!localSentIds.has(uniqueId)) {
           localSentIds.add(uniqueId);
-          if (localSentIds.size > 10000) {
+          if (localSentIds.size > 5000) {
             for (const val of localSentIds.values().take(500)) {
               localSentIds.delete(val);
             }

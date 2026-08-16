@@ -549,9 +549,9 @@ async function flushSpamBatch() {
   return storageQueue.enqueue(async () => {
     await ensureHistoryInitialized();
     inMemoryHistory.unshift(...batch.reverse());
-    if (inMemoryHistory.length > 10000) {
-      const evicted = inMemoryHistory.slice(10000);
-      inMemoryHistory.length = 10000;
+    if (inMemoryHistory.length > 5000) {
+      const evicted = inMemoryHistory.slice(5000);
+      inMemoryHistory.length = 5000;
       for (const item of evicted) {
         if (item?.id) {
           globalSpamCache.delete(item.id);
