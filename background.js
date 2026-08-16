@@ -67,28 +67,61 @@ class AsyncQueue {
 const globalSpamCache = new Set();
 const storageQueue = new AsyncQueue();
 
-storageQueue.enqueue(async () => {
-  const items = await chrome.storage.local.get(getStorageDefaults('blockedHistory'));
-  const history = items.blockedHistory ?? [];
-  Iterator.from(history)
-    .filter((item) => item.id)
-    .forEach((item) => {
+let inMemoryHistory = null;
+let inMemoryBlockedCount = null;
+let pendingSpamBatch = [];
+let spamBatchTimer = null;
+let isInternalStorageWrite = false;
+
+function syncGlobalSpamCache() {
+  globalSpamCache.clear();
+  for (const item of inMemoryHistory) {
+    if (item?.id) {
       globalSpamCache.add(item.id);
-    });
+    }
+  }
+}
+
+const initHistoryPromise = storageQueue.enqueue(async () => {
+  const items = await chrome.storage.local.get(
+    getStorageDefaults('blockedCount', 'blockedHistory'),
+  );
+  inMemoryHistory = items.blockedHistory ?? [];
+  inMemoryBlockedCount = items.blockedCount ?? 0;
+  syncGlobalSpamCache();
 });
 
+async function ensureHistoryInitialized() {
+  if (inMemoryHistory === null) {
+    await initHistoryPromise;
+  }
+}
+
+async function saveHistoryState() {
+  isInternalStorageWrite = true;
+  try {
+    await chrome.storage.local.set({
+      blockedCount: inMemoryBlockedCount,
+      blockedHistory: inMemoryHistory,
+    });
+  } finally {
+    queueMicrotask(() => {
+      isInternalStorageWrite = false;
+    });
+  }
+}
+
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local' || !changes.blockedHistory) return;
-  storageQueue.enqueue(async () => {
-    const items = await chrome.storage.local.get(getStorageDefaults('blockedHistory'));
-    const history = items.blockedHistory ?? [];
-    globalSpamCache.clear();
-    Iterator.from(history)
-      .filter((item) => item.id)
-      .forEach((item) => {
-        globalSpamCache.add(item.id);
-      });
-  });
+  if (area !== 'local' || isInternalStorageWrite) return;
+
+  if (changes.blockedHistory) {
+    inMemoryHistory = changes.blockedHistory.newValue ?? [];
+    syncGlobalSpamCache();
+  }
+
+  if (changes.blockedCount) {
+    inMemoryBlockedCount = changes.blockedCount.newValue ?? 0;
+  }
 });
 
 async function doSync() {
@@ -380,9 +413,9 @@ async function blockAllHistoryUsers(usersToBlock = null) {
   if (usersToBlock && Array.isArray(usersToBlock)) {
     names = usersToBlock;
   } else {
-    const items = await chrome.storage.local.get(getStorageDefaults('blockedHistory'));
+    await ensureHistoryInitialized();
     const screenNames = new Set(
-      Iterator.from(items.blockedHistory ?? [])
+      Iterator.from(inMemoryHistory ?? [])
         .map((item) => extractCleanScreenName(item.user))
         .filter((name) => /^[a-zA-Z0-9_]{1,15}$/v.test(name)),
     );
@@ -410,8 +443,16 @@ chrome.runtime.onMessage.addListener((message) => {
     return Promise.resolve({ success: true });
   }
   if (message.action === 'clearSpamCache') {
+    if (spamBatchTimer) {
+      clearTimeout(spamBatchTimer);
+      spamBatchTimer = null;
+    }
+    pendingSpamBatch = [];
     storageQueue.enqueue(async () => {
-      await chrome.storage.local.set({ blockedCount: 0, blockedHistory: [] });
+      inMemoryHistory = [];
+      inMemoryBlockedCount = 0;
+      globalSpamCache.clear();
+      await saveHistoryState();
     });
     notifyContentScripts({ action: 'clearLocalSentIds' });
     return Promise.resolve({ success: true });
@@ -437,75 +478,71 @@ function handleRemoveSpamRecord(id, time) {
   }
 
   storageQueue.enqueue(async () => {
-    const storageItems = await chrome.storage.local.get(
-      getStorageDefaults('blockedCount', 'blockedHistory'),
-    );
-    let history = storageItems.blockedHistory ?? [];
-    const originalLength = history.length;
-    history = history.filter((item) => !(item.id === id && item.time === time));
+    await ensureHistoryInitialized();
 
-    const removedCount = originalLength - history.length;
+    const originalLength = inMemoryHistory.length;
+    inMemoryHistory = inMemoryHistory.filter((item) => !(item.id === id && item.time === time));
+
+    const removedCount = originalLength - inMemoryHistory.length;
     if (removedCount > 0) {
-      const newCount = Math.max(0, (storageItems.blockedCount ?? 0) - removedCount);
-      await chrome.storage.local.set({
-        blockedCount: newCount,
-        blockedHistory: history,
-      });
+      if (id) {
+        globalSpamCache.delete(id);
+      }
+      inMemoryBlockedCount = Math.max(0, (inMemoryBlockedCount ?? 0) - removedCount);
+      await saveHistoryState();
     }
   });
 }
 
-function handleRecordSpam(items) {
-  if (!items || items.length === 0) return;
+async function flushSpamBatch() {
+  if (pendingSpamBatch.length === 0) return;
+  const batch = pendingSpamBatch;
+  pendingSpamBatch = [];
 
   storageQueue.enqueue(async () => {
-    const newSpams = Iterator.from(items)
-      .filter((item) => !globalSpamCache.has(item.id))
-      .map((item) => {
-        globalSpamCache.add(item.id);
-        return {
-          id: item.id,
-          text: item.text.slice(0, 200),
-          user: item.user,
-          displayName: item.displayName,
-          reason: item.reason,
-          time: item.time,
-          isAutoBlock: item.isAutoBlock,
-        };
-      })
-      .toArray();
-
-    if (newSpams.length === 0) return;
-
-    const storageItems = await chrome.storage.local.get(
-      getStorageDefaults('blockedCount', 'blockedHistory'),
-    );
-
-    const { autoBlock: autoBlockSpams = [] } = Object.groupBy(newSpams, (s) =>
-      s.isAutoBlock ? 'autoBlock' : 'manual',
-    );
-    const autoBlockScreenNames = autoBlockSpams.map((s) => s.user);
-
-    if (autoBlockScreenNames.length > 0) {
-      autoBlockManager.enqueueBatch(autoBlockScreenNames);
+    await ensureHistoryInitialized();
+    inMemoryHistory.unshift(...batch);
+    if (inMemoryHistory.length > 10000) {
+      inMemoryHistory.length = 10000;
     }
-
-    const history = storageItems.blockedHistory ?? [];
-    const historyIds = new Set(Iterator.from(history).map((h) => h.id));
-    const uniqueSpams = newSpams.filter((s) => !historyIds.has(s.id));
-
-    if (uniqueSpams.length === 0) return;
-
-    history.unshift(...uniqueSpams);
-    if (history.length > 10000) {
-      history.length = 10000;
-    }
-
-    await chrome.storage.local.set({
-      blockedCount: (storageItems.blockedCount ?? 0) + uniqueSpams.length,
-      blockedHistory: history,
-    });
+    inMemoryBlockedCount = (inMemoryBlockedCount ?? 0) + batch.length;
+    await saveHistoryState();
   });
+}
+
+function handleRecordSpam(items) {
+  if (!items?.length) return;
+
+  const newSpams = [];
+  for (const item of items) {
+    if (!item?.id || globalSpamCache.has(item.id)) continue;
+    globalSpamCache.add(item.id);
+    newSpams.push({
+      id: item.id,
+      text: item.text ? item.text.slice(0, 200) : '',
+      user: item.user || '',
+      displayName: item.displayName || '',
+      reason: item.reason || '',
+      time: item.time || Temporal.Now.instant().epochMilliseconds,
+      isAutoBlock: item.isAutoBlock === true,
+    });
+  }
+
+  if (newSpams.length === 0) return;
+
+  const autoBlockScreenNames = newSpams.filter((s) => s.isAutoBlock && s.user).map((s) => s.user);
+
+  if (autoBlockScreenNames.length > 0) {
+    autoBlockManager.enqueueBatch(autoBlockScreenNames);
+  }
+
+  pendingSpamBatch.push(...newSpams);
+  if (!spamBatchTimer) {
+    spamBatchTimer = setTimeout(() => {
+      spamBatchTimer = null;
+      flushSpamBatch();
+    }, 50);
+  }
 }
 
 async function handleBlockUser(screenName, isBlock) {
