@@ -1196,6 +1196,7 @@ function renderHistoryPage() {
     return;
   }
 
+  const newSpans = [];
   const fragment = document.createDocumentFragment();
   for (let i = start; i < end; i++) {
     const item = filteredHistory[i];
@@ -1212,6 +1213,7 @@ function renderHistoryPage() {
       highlightText(nameSpan, currentSearchQuery);
       highlightText(handleSpan, currentSearchQuery);
       userInfo.append(nameSpan, handleSpan);
+      newSpans.push(nameSpan);
     } else if (handle) {
       const handleSpan = el('span', { className: 'history-handle', textContent: `@${handle}` });
       highlightText(handleSpan, currentSearchQuery);
@@ -1220,9 +1222,11 @@ function renderHistoryPage() {
       const userSpan = el('span', {
         className: 'history-display-name',
         textContent: item.user ?? '未知用户',
+        title: item.user ?? '未知用户',
       });
       highlightText(userSpan, currentSearchQuery);
       userInfo.append(userSpan);
+      newSpans.push(userSpan);
     }
 
     const removeBtn = el('button', {
@@ -1319,6 +1323,12 @@ function renderHistoryPage() {
     fragment.appendChild(div);
   }
   historyList.appendChild(fragment);
+
+  for (const span of newSpans) {
+    if (span.scrollWidth > span.clientWidth) {
+      span.classList.add('is-overflowing');
+    }
+  }
 
   historyNextIndex = end;
   isHistoryLoading = false;
