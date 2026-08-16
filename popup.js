@@ -1324,9 +1324,11 @@ function renderHistoryPage() {
   }
   historyList.appendChild(fragment);
 
-  const overflowingSpans = newSpans.filter((span) => span.scrollWidth > span.clientWidth);
-  for (const span of overflowingSpans) {
-    span.classList.add('is-overflowing');
+  for (let i = 0; i < newSpans.length; i++) {
+    const span = newSpans[i];
+    if (span.scrollWidth > span.clientWidth) {
+      span.classList.add('is-overflowing');
+    }
   }
 
   historyNextIndex = end;
