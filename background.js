@@ -71,11 +71,11 @@ let inMemoryHistory = null;
 let inMemoryBlockedCount = null;
 let pendingSpamBatch = [];
 let spamBatchTimer = null;
-let isInternalStorageWrite = false;
+let currentWriteRevision = 0;
 
 function syncGlobalSpamCache() {
   globalSpamCache.clear();
-  for (const item of inMemoryHistory) {
+  for (const item of inMemoryHistory ?? []) {
     if (item?.id) {
       globalSpamCache.add(item.id);
     }
@@ -98,21 +98,24 @@ async function ensureHistoryInitialized() {
 }
 
 async function saveHistoryState() {
-  isInternalStorageWrite = true;
+  const rev = ++currentWriteRevision;
   try {
     await chrome.storage.local.set({
       blockedCount: inMemoryBlockedCount,
       blockedHistory: inMemoryHistory,
+      _historyRev: rev,
     });
-  } finally {
-    queueMicrotask(() => {
-      isInternalStorageWrite = false;
-    });
+  } catch (e) {
+    console.error('[X-Blocker] saveHistoryState error:', e);
   }
 }
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local' || isInternalStorageWrite) return;
+  if (area !== 'local') return;
+
+  if (changes._historyRev && changes._historyRev.newValue <= currentWriteRevision) {
+    return;
+  }
 
   if (changes.blockedHistory) {
     inMemoryHistory = changes.blockedHistory.newValue ?? [];
@@ -439,8 +442,7 @@ chrome.runtime.onMessage.addListener((message) => {
     return storageQueue.enqueue(() => blockAllHistoryUsers(message.users));
   }
   if (message.action === 'recordSpam') {
-    handleRecordSpam(message.items);
-    return Promise.resolve({ success: true });
+    return handleRecordSpam(message.items).then(() => ({ success: true }));
   }
   if (message.action === 'clearSpamCache') {
     if (spamBatchTimer) {
@@ -477,6 +479,16 @@ function handleRemoveSpamRecord(id, time) {
     notifyContentScripts({ action: 'removeLocalSentId', id });
   }
 
+  if (pendingSpamBatch.length > 0) {
+    const originalPendingLength = pendingSpamBatch.length;
+    pendingSpamBatch = pendingSpamBatch.filter(
+      (item) => !(item.id === id && (!time || item.time === time)),
+    );
+    if (originalPendingLength > pendingSpamBatch.length && id) {
+      globalSpamCache.delete(id);
+    }
+  }
+
   storageQueue.enqueue(async () => {
     await ensureHistoryInitialized();
 
@@ -495,23 +507,34 @@ function handleRemoveSpamRecord(id, time) {
 }
 
 async function flushSpamBatch() {
+  if (spamBatchTimer) {
+    clearTimeout(spamBatchTimer);
+    spamBatchTimer = null;
+  }
   if (pendingSpamBatch.length === 0) return;
   const batch = pendingSpamBatch;
   pendingSpamBatch = [];
 
-  storageQueue.enqueue(async () => {
+  return storageQueue.enqueue(async () => {
     await ensureHistoryInitialized();
     inMemoryHistory.unshift(...batch);
     if (inMemoryHistory.length > 10000) {
+      const evicted = inMemoryHistory.slice(10000);
       inMemoryHistory.length = 10000;
+      for (const item of evicted) {
+        if (item?.id) {
+          globalSpamCache.delete(item.id);
+        }
+      }
     }
     inMemoryBlockedCount = (inMemoryBlockedCount ?? 0) + batch.length;
     await saveHistoryState();
   });
 }
 
-function handleRecordSpam(items) {
+async function handleRecordSpam(items) {
   if (!items?.length) return;
+  await ensureHistoryInitialized();
 
   const newSpams = [];
   for (const item of items) {
