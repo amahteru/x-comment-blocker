@@ -882,7 +882,6 @@ resetCountBtn.addEventListener('click', async () => {
 
 let currentHistory = [];
 let filteredHistory = [];
-let currentBlockedUsersOnX = [];
 let currentBlockedUsersOnXSet = new Set();
 let historyNextIndex = 0;
 const HISTORY_PAGE_SIZE = 50;
@@ -1076,13 +1075,14 @@ function updateFilterOptions() {
   if (!filterDropdown) return;
 
   const reasonsSet = new Set();
-  const hasBlockedFilter = currentBlockedUsersOnXSet.size > 0;
+  let checkBlocked = currentBlockedUsersOnXSet.size > 0;
 
   for (let i = 0; i < currentHistory.length; i++) {
     const item = currentHistory[i];
     if (item.reason) reasonsSet.add(item.reason);
-    if (hasBlockedFilter && currentBlockedUsersOnXSet.has(extractCleanScreenName(item.user))) {
+    if (checkBlocked && currentBlockedUsersOnXSet.has(extractCleanScreenName(item.user))) {
       reasonsSet.add('__blocked_on_x__');
+      checkBlocked = false;
     }
   }
 
@@ -1263,7 +1263,6 @@ function renderHistoryPage() {
             }
 
             await chrome.storage.local.set({ blockedUsersOnX: currentList });
-            currentBlockedUsersOnX = currentList;
             currentBlockedUsersOnXSet = new Set(currentList);
           } else {
             showStatus(res?.reason || '操作失败');
@@ -1343,8 +1342,7 @@ viewHistoryBtn.addEventListener('click', async () => {
     getStorageDefaults('blockedHistory', 'blockedUsersOnX', 'historyFilterReason'),
   );
   currentHistory = items.blockedHistory ?? [];
-  currentBlockedUsersOnX = items.blockedUsersOnX ?? [];
-  currentBlockedUsersOnXSet = new Set(currentBlockedUsersOnX);
+  currentBlockedUsersOnXSet = new Set(items.blockedUsersOnX ?? []);
 
   const oldReason = items.historyFilterReason || 'all';
   currentFilterReason = oldReason;
@@ -1527,8 +1525,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     blockedCountEl.textContent = changes.blockedCount.newValue || 0;
   }
   if (changes.blockedUsersOnX) {
-    currentBlockedUsersOnX = changes.blockedUsersOnX.newValue ?? [];
-    currentBlockedUsersOnXSet = new Set(currentBlockedUsersOnX);
+    currentBlockedUsersOnXSet = new Set(changes.blockedUsersOnX.newValue ?? []);
     const screenNames = new Set(
       Iterator.from(document.querySelectorAll('button.btn-block-x')).map(
         (btn) => btn.dataset.screenName,
