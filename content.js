@@ -569,7 +569,15 @@
       if (shouldCheck && onlyComments && isMainTweet) shouldCheck = false;
 
       const spamResult = shouldCheck
-        ? detectSpam(tweet, textNode, userNode, rawTweetText, rawUserName, isStatusPage, isMainTweet)
+        ? detectSpam(
+            tweet,
+            textNode,
+            userNode,
+            rawTweetText,
+            rawUserName,
+            isStatusPage,
+            isMainTweet,
+          )
         : null;
       const isSpam = spamResult?.isSpam ?? false;
 
