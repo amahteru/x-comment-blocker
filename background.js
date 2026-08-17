@@ -249,7 +249,6 @@ class AutoBlockManager {
 
   async enqueueBatch(screenNames) {
     await this.init();
-    await this.refreshFromStorage();
     if (!screenNames || screenNames.length === 0) return 0;
 
     const validNames = new Set(Iterator.from(screenNames).map(extractCleanScreenName))
@@ -421,22 +420,8 @@ autoBlockManager.init().then(() => {
   autoBlockManager.process();
 });
 
-async function blockAllHistoryUsers(usersToBlock = null) {
-  let names = [];
-  if (usersToBlock && Array.isArray(usersToBlock)) {
-    names = usersToBlock;
-  } else {
-    await ensureHistoryInitialized();
-    if (pendingSpamBatch.length > 0) {
-      await flushSpamBatch();
-    }
-    const screenNames = new Set(
-      Iterator.from(inMemoryHistory ?? [])
-        .map((item) => extractCleanScreenName(item.user))
-        .filter((name) => /^[a-zA-Z0-9_]{1,15}$/v.test(name)),
-    );
-    names = screenNames.values().toArray();
-  }
+async function blockAllHistoryUsers(usersToBlock) {
+  const names = Array.isArray(usersToBlock) ? usersToBlock : [];
   const queued = await autoBlockManager.enqueueBatch(names);
   return { success: true, total: names.length, queued };
 }
@@ -503,15 +488,15 @@ async function notifyContentScripts(message) {
 }
 
 function handleRemoveSpamRecord(id, time) {
+  const isMatch = (item) => !(item.id === id && (!time || item.time === time));
+
   if (id) {
     notifyContentScripts({ action: 'removeLocalSentId', id });
   }
 
   if (pendingSpamBatch.length > 0) {
     const originalPendingLength = pendingSpamBatch.length;
-    pendingSpamBatch = pendingSpamBatch.filter(
-      (item) => !(item.id === id && (!time || item.time === time)),
-    );
+    pendingSpamBatch = pendingSpamBatch.filter(isMatch);
     if (originalPendingLength > pendingSpamBatch.length && id) {
       globalSpamCache.delete(id);
     }
@@ -521,9 +506,7 @@ function handleRemoveSpamRecord(id, time) {
     await ensureHistoryInitialized();
 
     const originalLength = inMemoryHistory.length;
-    inMemoryHistory = inMemoryHistory.filter(
-      (item) => !(item.id === id && (!time || item.time === time)),
-    );
+    inMemoryHistory = inMemoryHistory.filter(isMatch);
 
     const removedCount = originalLength - inMemoryHistory.length;
     if (removedCount > 0) {
