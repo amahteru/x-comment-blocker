@@ -64,6 +64,7 @@ const whitelistCount = document.getElementById('whitelistCount');
 const newWhitelistUser = document.getElementById('newWhitelistUser');
 const addWhitelistBtn = document.getElementById('addWhitelistBtn');
 const whitelistList = document.getElementById('whitelistList');
+const whitelistScrollContainer = document.getElementById('whitelistScrollContainer');
 
 const openCloudModalBtn = document.getElementById('openCloudModalBtn');
 const cloudModal = document.getElementById('cloudModal');
@@ -1507,7 +1508,9 @@ addWhitelistBtn.addEventListener('click', async () => {
     await chrome.storage.local.set({ whitelist });
     renderWhitelist(whitelist.length - 1);
     newWhitelistUser.value = '';
-    whitelistList.scrollTop = whitelistList.scrollHeight;
+    if (whitelistScrollContainer) {
+      whitelistScrollContainer.scrollTop = whitelistScrollContainer.scrollHeight;
+    }
   } else {
     showStatus('该用户已在白名单中');
   }

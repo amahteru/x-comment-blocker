@@ -7,7 +7,7 @@
   --text: #f4f4f5;
   --text-muted: #a1a1aa;
   --accent: #0ea5e9;
-  --accent-hover: #0284c7;
+  --btn-hover: rgb(255 255 255 / 8%);
   --danger: #ef4444;
   --success: #22c55e;
   --tag-bg: #1e293b;
@@ -101,7 +101,7 @@ body {
 
 .icon-btn:hover {
   color: var(--text);
-  background: rgb(255 255 255 / 8%);
+  background: var(--btn-hover);
 }
 
 .keyword-input-row {
