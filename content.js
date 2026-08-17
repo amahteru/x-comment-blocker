@@ -146,6 +146,21 @@
     }
   }
 
+  function getEnclosingTweetIfRelevant(target) {
+    let curr = target?.nodeType === Node.ELEMENT_NODE ? target : target?.parentElement;
+    let isRelevant = false;
+    while (curr && curr !== document.body) {
+      const testId = curr.getAttribute('data-testid');
+      if (testId === 'tweetText' || testId === 'User-Name') {
+        isRelevant = true;
+      } else if (testId === 'cellInnerDiv') {
+        return isRelevant ? curr : null;
+      }
+      curr = curr.parentElement;
+    }
+    return null;
+  }
+
   (async function init() {
     try {
       const items = await chrome.storage.local.get(
@@ -181,25 +196,19 @@
 
         for (const mutation of mutations) {
           for (const node of mutation.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              if (node.getAttribute('data-testid') === 'cellInnerDiv') {
-                pendingTweets.add(node);
-              } else if (node.querySelector) {
-                const innerTweets = node.querySelectorAll('[data-testid="cellInnerDiv"]');
-                innerTweets.forEach((t) => {
-                  pendingTweets.add(t);
-                });
+            if (node.nodeType !== Node.ELEMENT_NODE) continue;
+            if (node.getAttribute('data-testid') === 'cellInnerDiv') {
+              pendingTweets.add(node);
+            } else if (node.firstElementChild) {
+              for (const inner of node.querySelectorAll('[data-testid="cellInnerDiv"]')) {
+                pendingTweets.add(inner);
               }
             }
           }
 
-          const el = mutation.target;
-          if (!el.closest('[data-testid="tweetText"], [data-testid="User-Name"]')) {
-            continue;
-          }
-          const closestTweet = el.closest('[data-testid="cellInnerDiv"]');
-          if (closestTweet) {
-            pendingTweets.add(closestTweet);
+          const tweet = getEnclosingTweetIfRelevant(mutation.target);
+          if (tweet) {
+            pendingTweets.add(tweet);
           }
         }
 
