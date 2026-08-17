@@ -568,27 +568,14 @@
 
       if (shouldCheck && onlyComments && isMainTweet) shouldCheck = false;
 
-      let isSpam = false;
-      let isAutoBlock = false;
-      let blockReason = '';
-      let userName = '';
-      let stableHandle = '';
-      let displayName = '';
-
-      if (shouldCheck) {
-        ({ isSpam, isAutoBlock, blockReason, userName, stableHandle, displayName } = detectSpam(
-          tweet,
-          textNode,
-          userNode,
-          rawTweetText,
-          rawUserName,
-          isStatusPage,
-          isMainTweet,
-        ));
-      }
+      const spamResult = shouldCheck
+        ? detectSpam(tweet, textNode, userNode, rawTweetText, rawUserName, isStatusPage, isMainTweet)
+        : null;
+      const isSpam = spamResult?.isSpam ?? false;
 
       state.isSpam = isSpam;
       if (isSpam) {
+        const { isAutoBlock, blockReason, userName, stableHandle, displayName } = spamResult;
         tweet.classList.remove('x-comment-blocker-hidden-reply');
         tweet.classList.add('x-comment-blocker-hidden');
         let normalizedBody = rawTweetText
