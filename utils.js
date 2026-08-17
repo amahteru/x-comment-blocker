@@ -156,7 +156,10 @@ export async function syncCloudKeywords() {
 
     const cloudListSet = new Set(cloudList);
     const cleanedDisabled = disabledCloudKeywords.filter((k) => cloudListSet.has(k));
-    const allValidKeywordsSet = new Set([...userKws, ...cloudListSet]);
+    const allValidKeywordsSet = new Set(cloudListSet);
+    for (const k of userKws) {
+      allValidKeywordsSet.add(k);
+    }
     const cleanedAutoBlock = autoBlockKeywords.filter((k) => allValidKeywordsSet.has(k));
 
     await browserApi.storage.local.set({
