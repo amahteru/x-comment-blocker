@@ -340,6 +340,8 @@ Visa卡领取
 南蛮
 翻墙穷蛆
 aleksyl
+Ox_Azu
+BellinoSha73352
 dongbeipear
 ilovecatlovecar
 PULL_Media
@@ -472,6 +474,16 @@ gezixinhao2026
 isnowzerocovid
 tadadijyanaiu
 aaaz30105410
+hhdd420
+ookikaeru
+cokesama1988
+kazekita382593
+calvinhan18
+YichengZu98473
+ParkDan8eud
+my6826393073560
+SpoofChina
+ouch8103
 有哥哥线下吗
 想被人炒
 想被你操
@@ -657,7 +669,7 @@ jpobserver
 /够劲炸裂[~\s💥]*(?:https?:\/\/)?t\.cn\/\w+/i
 /是这个吧.*\r?\n\s*(?:https?:\/\/)?t\.cn\/\w+/i
 /^[a-zA-Z\s.,!?]+\n只入身体.+?不入生活。?$/
-/(?=.*(?:👠))(?=.*(?:超可爱|离异|学生|调教|奶茶|私处|分手|处男|甜软|老师))/
+/(?=.*(?:👠))(?=.*(?:超可爱|离异|学生|调教|奶茶|私处|分手|处男|甜软|老师|骚气|四射|萌宠|泡芙))/
 /(?=.*(?:💟))(?=.*(?:腹肌|弟弟))/
 /(?=.*(?:🌹))(?=.*(?:E奶|老婆|菩萨|母狗))/
 /只入身体.*不入生活/
