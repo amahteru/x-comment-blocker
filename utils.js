@@ -11,7 +11,7 @@ export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
 const fastHandleRegex = /^[@/]?([a-zA-Z0-9_]{1,15})$/;
 
 export function isKeywordRegex(k) {
-  return typeof k === 'string' && k.length >= 3 && k.startsWith('/') && /\/[a-zA-Z]*$/v.test(k);
+  return typeof k === 'string' && k.length >= 3 && /^\/.+\/[a-zA-Z]*$/v.test(k);
 }
 
 export function extractCleanScreenName(input) {
@@ -156,11 +156,10 @@ export async function syncCloudKeywords() {
 
     const cloudListSet = new Set(cloudList);
     const cleanedDisabled = disabledCloudKeywords.filter((k) => cloudListSet.has(k));
-    const allValidKeywordsSet = new Set(cloudListSet);
-    for (const k of userKws) {
-      allValidKeywordsSet.add(k);
-    }
-    const cleanedAutoBlock = autoBlockKeywords.filter((k) => allValidKeywordsSet.has(k));
+    const userKwsSet = new Set(userKws);
+    const cleanedAutoBlock = autoBlockKeywords.filter(
+      (k) => cloudListSet.has(k) || userKwsSet.has(k),
+    );
 
     await browserApi.storage.local.set({
       cloudKeywords: cloudList.join('\n'),
