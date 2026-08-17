@@ -158,7 +158,7 @@ function updateBlockBtns(screenName, { disabled = false, loading = false } = {})
         btn.textContent = '请求中...';
         return;
       }
-      const isBlocked = currentBlockedUsersOnX.includes(screenName);
+      const isBlocked = currentBlockedUsersOnXSet.has(screenName);
       btn.textContent = isBlocked ? '已拉黑' : '拉黑';
       btn.classList.toggle('success', isBlocked);
       btn.title = isBlocked ? '点击解除拉黑' : '在 X 上拉黑该账号';
@@ -883,6 +883,7 @@ resetCountBtn.addEventListener('click', async () => {
 let currentHistory = [];
 let filteredHistory = [];
 let currentBlockedUsersOnX = [];
+let currentBlockedUsersOnXSet = new Set();
 let historyNextIndex = 0;
 const HISTORY_PAGE_SIZE = 50;
 let isHistoryLoading = false;
@@ -1075,12 +1076,15 @@ function updateFilterOptions() {
   if (!filterDropdown) return;
 
   const reasonsSet = new Set();
-  currentHistory.forEach((item) => {
+  const hasBlockedFilter = currentBlockedUsersOnXSet.size > 0;
+
+  for (let i = 0; i < currentHistory.length; i++) {
+    const item = currentHistory[i];
     if (item.reason) reasonsSet.add(item.reason);
-    if (currentBlockedUsersOnX.includes(extractCleanScreenName(item.user))) {
+    if (hasBlockedFilter && currentBlockedUsersOnXSet.has(extractCleanScreenName(item.user))) {
       reasonsSet.add('__blocked_on_x__');
     }
-  });
+  }
 
   const reasons = reasonsSet
     .values()
@@ -1135,13 +1139,12 @@ function highlightText(element, query) {
 
 function applyHistoryFilter() {
   let filtered = currentHistory;
-  const blockedUsersSet = new Set(currentBlockedUsersOnX);
 
   if (currentFilterReason !== 'all') {
     if (currentFilterReason === '__blocked_on_x__') {
       filtered = filtered.filter((item) => {
         const screenName = extractCleanScreenName(item.user);
-        return blockedUsersSet.has(screenName);
+        return currentBlockedUsersOnXSet.has(screenName);
       });
     } else {
       filtered = filtered.filter((item) => item.reason === currentFilterReason);
@@ -1235,13 +1238,13 @@ function renderHistoryPage() {
       const blockBtn = el('button', { className: 'btn-block-x' });
       blockBtn.dataset.screenName = screenName;
 
-      const isBlocked = currentBlockedUsersOnX.includes(screenName);
+      const isBlocked = currentBlockedUsersOnXSet.has(screenName);
       blockBtn.textContent = isBlocked ? '已拉黑' : '拉黑';
       blockBtn.classList.toggle('success', isBlocked);
       blockBtn.title = isBlocked ? '点击解除拉黑' : '在 X 上拉黑该账号';
 
       blockBtn.onclick = async () => {
-        const isCurrentlyBlocked = currentBlockedUsersOnX.includes(screenName);
+        const isCurrentlyBlocked = currentBlockedUsersOnXSet.has(screenName);
         updateBlockBtns(screenName, { disabled: true, loading: true });
 
         try {
@@ -1261,6 +1264,7 @@ function renderHistoryPage() {
 
             await chrome.storage.local.set({ blockedUsersOnX: currentList });
             currentBlockedUsersOnX = currentList;
+            currentBlockedUsersOnXSet = new Set(currentList);
           } else {
             showStatus(res?.reason || '操作失败');
           }
@@ -1340,6 +1344,7 @@ viewHistoryBtn.addEventListener('click', async () => {
   );
   currentHistory = items.blockedHistory ?? [];
   currentBlockedUsersOnX = items.blockedUsersOnX ?? [];
+  currentBlockedUsersOnXSet = new Set(currentBlockedUsersOnX);
 
   const oldReason = items.historyFilterReason || 'all';
   currentFilterReason = oldReason;
@@ -1523,6 +1528,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (changes.blockedUsersOnX) {
     currentBlockedUsersOnX = changes.blockedUsersOnX.newValue ?? [];
+    currentBlockedUsersOnXSet = new Set(currentBlockedUsersOnX);
     const screenNames = new Set(
       Iterator.from(document.querySelectorAll('button.btn-block-x')).map(
         (btn) => btn.dataset.screenName,

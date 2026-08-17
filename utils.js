@@ -8,8 +8,14 @@ export const SYNC_INTERVAL_MINUTES = 360;
 export const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
 export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
 
+const fastHandleRegex = /^[@\/]?([a-zA-Z0-9_]{1,15})$/;
+
 export function extractCleanScreenName(input) {
   if (!input) return '';
+  const simpleMatch = fastHandleRegex.exec(input);
+  if (simpleMatch) {
+    return simpleMatch[1].toLowerCase();
+  }
   const cleaned = input.replaceAll(invisibleCharsRegex, '').trim();
   const match = cleaned.match(/(?:^|\/|@)(?<handle>[a-zA-Z0-9_]{1,15})(?:\/|\?|$)/v);
   if (match) return match.groups.handle.toLowerCase();
