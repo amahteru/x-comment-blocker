@@ -2,6 +2,7 @@ import {
   browserApi as chrome,
   extractCleanScreenName,
   getStorageDefaults,
+  isKeywordRegex,
   parseKeywords,
   SYNC_INTERVAL_MS,
 } from './utils.js';
@@ -164,10 +165,6 @@ function updateBlockBtns(screenName, { disabled = false, loading = false } = {})
       btn.classList.toggle('success', isBlocked);
       btn.title = isBlocked ? '点击解除拉黑' : '在 X 上拉黑该账号';
     });
-}
-
-function isKeywordRegex(kw) {
-  return kw.length >= 3 && kw.startsWith('/') && /\/[a-zA-Z]*$/.test(kw);
 }
 
 function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {

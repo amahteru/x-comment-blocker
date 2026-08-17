@@ -1,14 +1,18 @@
 export const browserApi = globalThis.browser ?? globalThis.chrome;
 
-export const CLOUD_KEYWORDS_API =
+const CLOUD_KEYWORDS_API =
   'https://api.github.com/repos/amahteru/x-comment-blocker/contents/keywords.txt';
-export const CLOUD_KEYWORDS_CDN =
+const CLOUD_KEYWORDS_CDN =
   'https://fastly.jsdelivr.net/gh/amahteru/x-comment-blocker@main/keywords.txt';
 export const SYNC_INTERVAL_MINUTES = 360;
 export const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
 export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
 
 const fastHandleRegex = /^[@/]?([a-zA-Z0-9_]{1,15})$/;
+
+export function isKeywordRegex(k) {
+  return typeof k === 'string' && k.length >= 3 && k.startsWith('/') && /\/[a-zA-Z]*$/v.test(k);
+}
 
 export function extractCleanScreenName(input) {
   if (!input) return '';
@@ -19,11 +23,7 @@ export function extractCleanScreenName(input) {
   const cleaned = input.replaceAll(invisibleCharsRegex, '').trim();
   const match = cleaned.match(/(?:^|\/|@)(?<handle>[a-zA-Z0-9_]{1,15})(?:\/|\?|$)/v);
   if (match) return match.groups.handle.toLowerCase();
-  return cleaned
-    .replace(/^[@\/]+/v, '')
-    .split(/[\/?]/v)
-    .at(0)
-    .toLowerCase();
+  return '';
 }
 
 const STORAGE_DEFAULTS = {
@@ -55,25 +55,28 @@ const STORAGE_DEFAULTS = {
 };
 
 export function getStorageDefaults(...keys) {
-  return Object.fromEntries(
-    Iterator.from(keys)
-      .filter((key) => Object.hasOwn(STORAGE_DEFAULTS, key))
-      .map((key) => [key, Array.isArray(STORAGE_DEFAULTS[key]) ? [] : STORAGE_DEFAULTS[key]]),
-  );
+  const result = {};
+  for (const key of keys) {
+    if (Object.hasOwn(STORAGE_DEFAULTS, key)) {
+      result[key] = Array.isArray(STORAGE_DEFAULTS[key]) ? [] : STORAGE_DEFAULTS[key];
+    }
+  }
+  return result;
 }
 
 export function parseKeywords(text) {
   if (!text) return [];
-  return Iterator.from(text.split('\n'))
-    .map((k) => k.replaceAll(invisibleCharsRegex, '').trim())
-    .filter((k) => k)
-    .map((k) => {
-      if (k.length >= 3 && k.startsWith('/') && /\/[a-zA-Z]*$/v.test(k)) {
-        return k;
-      }
-      return k.toLowerCase();
-    })
-    .toArray();
+  const result = [];
+  for (const line of text.split('\n')) {
+    const k = line.replaceAll(invisibleCharsRegex, '').trim();
+    if (!k) continue;
+    if (isKeywordRegex(k)) {
+      result.push(k);
+    } else {
+      result.push(k.toLowerCase());
+    }
+  }
+  return result;
 }
 
 export async function syncCloudKeywords() {
@@ -118,7 +121,7 @@ export async function syncCloudKeywords() {
 
     if (!isCDN && resp.status === 304) {
       await browserApi.storage.local.set({
-        lastSyncTime: Temporal.Now.instant().epochMilliseconds,
+        lastSyncTime: Date.now(),
         syncStatus: 'ok',
         syncError: '',
       });
@@ -141,7 +144,7 @@ export async function syncCloudKeywords() {
         `[X-Blocker] CDN cache (${cloudList.length} items) is older than local (${currentCloudList.length} items). Update aborted.`,
       );
       await browserApi.storage.local.set({
-        lastSyncTime: Temporal.Now.instant().epochMilliseconds,
+        lastSyncTime: Date.now(),
         syncStatus: 'ok',
         syncError: '',
       });
@@ -152,22 +155,16 @@ export async function syncCloudKeywords() {
     const userKws = parseKeywords(storageItems.keywords);
 
     const cloudListSet = new Set(cloudList);
-    const cleanedDisabled = new Set(disabledCloudKeywords)
-      .intersection(cloudListSet)
-      .values()
-      .toArray();
+    const cleanedDisabled = disabledCloudKeywords.filter((k) => cloudListSet.has(k));
     const allValidKeywordsSet = new Set([...userKws, ...cloudListSet]);
-    const cleanedAutoBlock = new Set(autoBlockKeywords)
-      .intersection(allValidKeywordsSet)
-      .values()
-      .toArray();
+    const cleanedAutoBlock = autoBlockKeywords.filter((k) => allValidKeywordsSet.has(k));
 
     await browserApi.storage.local.set({
       cloudKeywords: cloudList.join('\n'),
       disabledCloudKeywords: cleanedDisabled,
       autoBlockKeywords: cleanedAutoBlock,
       cloudETag: newETag,
-      lastSyncTime: Temporal.Now.instant().epochMilliseconds,
+      lastSyncTime: Date.now(),
       syncStatus: 'ok',
       syncError: '',
     });
@@ -183,3 +180,4 @@ export async function syncCloudKeywords() {
     return false;
   }
 }
+
