@@ -1203,30 +1203,21 @@ function renderHistoryPage() {
     const handle = extractCleanScreenName(item.user);
 
     const userInfo = el('div', { className: 'history-item-user-info' });
-    if (handle && item.displayName) {
+    const displayName = handle ? item.displayName : (item.user ?? '未知用户');
+    if (displayName) {
       const nameSpan = el('span', {
         className: 'history-display-name',
-        textContent: item.displayName,
-        title: item.displayName,
+        textContent: displayName,
+        title: displayName,
       });
-      const handleSpan = el('span', { className: 'history-handle', textContent: `@${handle}` });
       highlightText(nameSpan, currentSearchQuery);
-      highlightText(handleSpan, currentSearchQuery);
-      userInfo.append(nameSpan, handleSpan);
+      userInfo.append(nameSpan);
       newSpans.push(nameSpan);
-    } else if (handle) {
+    }
+    if (handle) {
       const handleSpan = el('span', { className: 'history-handle', textContent: `@${handle}` });
       highlightText(handleSpan, currentSearchQuery);
       userInfo.append(handleSpan);
-    } else {
-      const userSpan = el('span', {
-        className: 'history-display-name',
-        textContent: item.user ?? '未知用户',
-        title: item.user ?? '未知用户',
-      });
-      highlightText(userSpan, currentSearchQuery);
-      userInfo.append(userSpan);
-      newSpans.push(userSpan);
     }
 
     const removeBtn = el('button', {
@@ -1324,16 +1315,11 @@ function renderHistoryPage() {
   }
   historyList.appendChild(fragment);
 
-  const overflowingSpans = [];
-  for (let i = 0; i < newSpans.length; i++) {
-    const span = newSpans[i];
-    if (span.scrollWidth > span.clientWidth) {
-      overflowingSpans.push(span);
-    }
-  }
-  for (let i = 0; i < overflowingSpans.length; i++) {
-    overflowingSpans[i].classList.add('is-overflowing');
-  }
+  newSpans
+    .filter((span) => span.scrollWidth > span.clientWidth)
+    .forEach((span) => {
+      span.classList.add('is-overflowing');
+    });
 
   historyNextIndex = end;
   isHistoryLoading = false;
