@@ -386,12 +386,11 @@
     textNode,
     userNode,
     rawTweetText,
-    rawUserName,
+    userName,
     isStatusPage,
     isMainTweet,
   ) {
     const tweetBody = rawTweetText.replaceAll(invisibleCharsRegex, '');
-    const userName = rawUserName;
     let stableHandle = '';
     let displayName = '';
 
@@ -500,14 +499,7 @@
       };
     }
 
-    return {
-      isSpam: false,
-      isAutoBlock: false,
-      blockReason: '',
-      userName,
-      stableHandle,
-      displayName,
-    };
+    return { isSpam: false };
   }
 
   function filterTweets(specificTweets = null) {
