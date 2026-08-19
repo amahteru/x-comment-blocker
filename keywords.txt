@@ -328,6 +328,7 @@ Visa卡领取
 同畜
 跨畜
 公畜
+顺男
 贱畜
 婚驴
 穷蛆
@@ -337,7 +338,9 @@ Visa卡领取
 兲朝人
 南蛮
 aleksyl
+xyiixl
 Ox_Azu
+A0aqx1
 BellinoSha73352
 fxmqs
 TD_bbboys258
@@ -523,6 +526,20 @@ XiuOu96566
 DingRui0103
 zhwei2017
 Lulupoi2
+jasminezr6q
+Lightk0yu
+MedyLuo
+Nanr2sr4
+lu2121741069066
+6yov9
+somezaki1115
+Litt1edoublep
+ttvv_tv
+eefkq134
+Syzdfyb
+timhughes1979O6
+wwgay5550
+ZhuYu3629
 有哥哥线下吗
 想被人炒
 想被你操
@@ -680,6 +697,7 @@ jpobserver
 （q群
 我看过她和大哥的视频
 t.cn
+飞碟云VPN
 /^.{1,3}(?:体验用?|测评|安利|推荐|分享|试用|使用).{0,6}(?:节点|科学上网|VPN|梯子|加速器).*/i
 /(?:银狐|FoxLink)[\s\S]{0,10}(?:中转|翻墙|代理|节点|加速|网络|科学上网|外网|梯子|vpn|海外|国际|访问|专线|线路|出海|跨境|出国|全球|高速|连接)/i
 /^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/
