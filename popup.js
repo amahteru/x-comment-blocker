@@ -775,6 +775,8 @@ if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
   editCloudAutoBlockBtn.addEventListener('click', () => {
     isEditingCloudAutoBlock = true;
     editCloudAutoBlockBtn.style.display = 'none';
+    if (filterCloudBtn) filterCloudBtn.style.display = 'none';
+    cloudFilterDropdown?.classList.remove('open');
     saveCloudAutoBlockBtn.style.display = 'inline-flex';
     if (selectAllCloudBtn) selectAllCloudBtn.style.display = 'inline-flex';
     renderCloudKeywords();
@@ -785,6 +787,7 @@ if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
     saveCloudAutoBlockBtn.style.display = 'none';
     if (selectAllCloudBtn) selectAllCloudBtn.style.display = 'none';
     editCloudAutoBlockBtn.style.display = 'inline-flex';
+    if (filterCloudBtn) filterCloudBtn.style.display = 'inline-flex';
     autoSave();
     renderCloudKeywords();
     renderUserKeywords();
@@ -835,6 +838,7 @@ closeCloudBtn.addEventListener('click', () => {
     saveCloudAutoBlockBtn.style.display = 'none';
     if (selectAllCloudBtn) selectAllCloudBtn.style.display = 'none';
     editCloudAutoBlockBtn.style.display = 'inline-flex';
+    if (filterCloudBtn) filterCloudBtn.style.display = 'inline-flex';
   }
   clearTimeout(cloudSearchDebounceTimer);
   if (cloudSearchContainer?.classList.contains('open')) {
