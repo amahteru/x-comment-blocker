@@ -488,7 +488,13 @@ function sanitizeImportedState(obj) {
     ) {
       out[key] = typeof value === 'string' ? value : String(value ?? '');
     } else if (
-      ['blockedCount', 'autoBlockToday', 'autoBlockPausedUntil', 'lastSyncTime'].includes(key)
+      [
+        'blockedCount',
+        'autoBlockToday',
+        'autoBlockPausedUntil',
+        'autoBlockBatchCount',
+        'lastSyncTime',
+      ].includes(key)
     ) {
       out[key] = Number(value) || 0;
     } else {
@@ -1490,8 +1496,10 @@ closeHistoryBtn.addEventListener('click', () => {
 });
 
 function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
+  const query = currentWhitelistSearchQuery.trim().toLowerCase();
+  const cleanQuery = query.replace(/^@/, '');
   const filteredWhitelist = whitelist.filter((handle) =>
-    handle.toLowerCase().includes(currentWhitelistSearchQuery),
+    cleanQuery ? handle.toLowerCase().includes(cleanQuery) : true,
   );
 
   if (filteredWhitelist.length === 0) {
@@ -1515,6 +1523,8 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
     const textSpan = document.createElement('span');
     textSpan.className = 'tag-text';
     textSpan.textContent = `@${handle}`;
+
+    highlightText(textSpan, query);
 
     const editBtn = document.createElement('button');
     editBtn.className = 'tag-btn tag-btn-edit';
@@ -1639,7 +1649,7 @@ addWhitelistBtn.addEventListener('click', async () => {
   }
 });
 
-newWhitelistUser.addEventListener('keypress', (e) => {
+newWhitelistUser.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     addWhitelistBtn.click();
   }
