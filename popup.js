@@ -1,6 +1,7 @@
 import {
   browserApi as chrome,
   extractCleanScreenName,
+  getResolvedCategoryToggles,
   getStorageDefaults,
   isKeywordRegex,
   parseCategorizedKeywords,
@@ -138,9 +139,13 @@ function updateEnabledState() {
   document.body.classList.toggle('disabled', !enableToggleEl.checked);
 }
 
-function el(tag, props, children) {
+function el(tag, props = {}, children) {
   const element = document.createElement(tag);
-  Object.assign(element, props);
+  const { innerHTML, safeHtml, ...rest } = props;
+  Object.assign(element, rest);
+  if (safeHtml || innerHTML) {
+    setSafeHtml(element, safeHtml || innerHTML);
+  }
   if (children) {
     element.append(...children);
   }
@@ -257,7 +262,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
 }
 
 function startEdit(tagEl, index) {
-  tagEl.innerHTML = '';
+  tagEl.replaceChildren();
   tagEl.classList.add('is-editing');
 
   const input = el('input', {
@@ -502,9 +507,11 @@ function sanitizeImportedState(obj) {
     }
   }
   if (obj.cloudCategoryKeywords !== undefined || obj.cloudCategoryUsernames !== undefined) {
-    out.cloudCategoryToggles = out.cloudCategoryToggles || {};
-    if (obj.cloudCategoryKeywords === false) out.cloudCategoryToggles['常规屏蔽词'] = false;
-    if (obj.cloudCategoryUsernames === false) out.cloudCategoryToggles['用户名'] = false;
+    out.cloudCategoryToggles = getResolvedCategoryToggles({
+      cloudCategoryToggles: out.cloudCategoryToggles,
+      cloudCategoryKeywords: obj.cloudCategoryKeywords,
+      cloudCategoryUsernames: obj.cloudCategoryUsernames,
+    });
   }
   return out;
 }
@@ -945,6 +952,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       'enabled',
       'cloudEnabled',
       'cloudCategoryToggles',
+      'cloudCategoryKeywords',
+      'cloudCategoryUsernames',
       'blockedCount',
       'lastSyncTime',
       'cloudKeywords',
@@ -966,13 +975,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await chrome.storage.local.set({ autoBlockKeywords: autoBlockKeywords.values().toArray() });
   }
 
-  cloudCategoryToggles = items.cloudCategoryToggles ?? {};
-  if (items.cloudCategoryKeywords === false) {
-    cloudCategoryToggles['常规屏蔽词'] ??= false;
-  }
-  if (items.cloudCategoryUsernames === false) {
-    cloudCategoryToggles['用户名'] ??= false;
-  }
+  cloudCategoryToggles = getResolvedCategoryToggles(items);
   updateCloudFilterDropdown(parseCategorizedKeywords(items.cloudKeywords ?? ''));
 
   checkUsernameEl.checked = items.checkUsername;
@@ -1503,10 +1506,12 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
   );
 
   if (filteredWhitelist.length === 0) {
-    const hint = document.createElement('div');
-    hint.className = 'empty-hint';
-    hint.textContent = whitelist.length === 0 ? '暂无白名单用户' : '未找到匹配的白名单用户';
-    whitelistList.replaceChildren(hint);
+    whitelistList.replaceChildren(
+      el('div', {
+        className: 'empty-hint',
+        textContent: whitelist.length === 0 ? '暂无白名单用户' : '未找到匹配的白名单用户',
+      }),
+    );
     whitelistCount.textContent = `(${whitelist.length})`;
     return;
   }
@@ -1515,39 +1520,39 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
 
   const nodes = filteredWhitelist.map((handle) => {
     const index = whitelist.indexOf(handle);
-    const itemEl = document.createElement('span');
-    itemEl.className =
-      'keyword-tag' +
-      (index === animateIndex ? ' fade-in-tag' : '') +
-      (index === fadeIndex ? ' fade-in' : '');
-    const textSpan = document.createElement('span');
-    textSpan.className = 'tag-text';
-    textSpan.textContent = `@${handle}`;
-
+    const textSpan = el('span', { className: 'tag-text', textContent: `@${handle}` });
     highlightText(textSpan, query);
 
-    const editBtn = document.createElement('button');
-    editBtn.className = 'tag-btn tag-btn-edit';
-    editBtn.title = '编辑';
-    setSafeHtml(editBtn, ICON_EDIT);
-    editBtn.onclick = () => startEditWhitelist(itemEl, handle);
+    const editBtn = el('button', {
+      className: 'tag-btn tag-btn-edit',
+      innerHTML: ICON_EDIT,
+      title: '编辑',
+      onclick: () => startEditWhitelist(itemEl, handle),
+    });
 
-    const delBtn = document.createElement('button');
-    delBtn.className = 'tag-btn tag-btn-del';
-    delBtn.title = '删除';
-    setSafeHtml(delBtn, ICON_DEL);
-    delBtn.onclick = () => {
-      itemEl.classList.remove('fade-in-tag');
-      itemEl.classList.add('fade-out-tag');
-      const hToRemove = handle;
-      setTimeout(async () => {
-        whitelist = whitelist.filter((h) => h !== hToRemove);
-        await chrome.storage.local.set({ whitelist });
-        renderWhitelist();
-      }, 200);
-    };
+    const delBtn = el('button', {
+      className: 'tag-btn tag-btn-del',
+      innerHTML: ICON_DEL,
+      title: '删除',
+      onclick: () => {
+        itemEl.classList.remove('fade-in-tag');
+        itemEl.classList.add('fade-out-tag');
+        const hToRemove = handle;
+        setTimeout(async () => {
+          whitelist = whitelist.filter((h) => h !== hToRemove);
+          await chrome.storage.local.set({ whitelist });
+          renderWhitelist();
+        }, 200);
+      },
+    });
 
-    itemEl.append(textSpan, editBtn, delBtn);
+    const itemEl = el(
+      'span',
+      {
+        className: `keyword-tag${index === animateIndex ? ' fade-in-tag' : ''}${index === fadeIndex ? ' fade-in' : ''}`,
+      },
+      [textSpan, editBtn, delBtn],
+    );
     return itemEl;
   });
 
@@ -1555,12 +1560,13 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
 }
 
 function startEditWhitelist(tagEl, oldHandle) {
-  tagEl.innerHTML = '';
+  tagEl.replaceChildren();
   tagEl.classList.add('is-editing');
 
-  const input = document.createElement('input');
-  input.className = 'tag-edit-input';
-  input.value = oldHandle;
+  const input = el('input', {
+    className: 'tag-edit-input',
+    value: oldHandle,
+  });
 
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -1570,17 +1576,19 @@ function startEditWhitelist(tagEl, oldHandle) {
     }
   });
 
-  const confirmBtn = document.createElement('button');
-  confirmBtn.className = 'tag-btn tag-btn-save';
-  setSafeHtml(confirmBtn, ICON_CHECK);
-  confirmBtn.title = '确认';
-  confirmBtn.onclick = () => confirmEditWhitelist(input, oldHandle);
+  const confirmBtn = el('button', {
+    className: 'tag-btn tag-btn-save',
+    innerHTML: ICON_CHECK,
+    title: '确认',
+    onclick: () => confirmEditWhitelist(input, oldHandle),
+  });
 
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'tag-btn tag-btn-del';
-  setSafeHtml(cancelBtn, ICON_DEL);
-  cancelBtn.title = '取消';
-  cancelBtn.onclick = () => renderWhitelist();
+  const cancelBtn = el('button', {
+    className: 'tag-btn tag-btn-del',
+    innerHTML: ICON_DEL,
+    title: '取消',
+    onclick: () => renderWhitelist(),
+  });
 
   tagEl.append(input, confirmBtn, cancelBtn);
 

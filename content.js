@@ -3,6 +3,7 @@
   const {
     browserApi: chrome,
     getStorageDefaults,
+    getResolvedCategoryToggles,
     parseKeywords,
     parseCategorizedKeywords,
     invisibleCharsRegex,
@@ -83,6 +84,8 @@
           'cloudEnabled',
           'cloudKeywords',
           'cloudCategoryToggles',
+          'cloudCategoryKeywords',
+          'cloudCategoryUsernames',
           'autoBlockKeywords',
           'disabledCloudKeywords',
         ),
@@ -93,7 +96,7 @@
       let cloudKws = [];
       if (items.cloudEnabled) {
         const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
-        const toggles = items.cloudCategoryToggles ?? {};
+        const toggles = getResolvedCategoryToggles(items);
         const candidateCloudKws = [];
         for (const [catName, list] of Object.entries(categorized)) {
           if (toggles[catName] ?? true) {
@@ -295,6 +298,8 @@
       changes.cloudEnabled ||
       changes.cloudKeywords ||
       changes.cloudCategoryToggles ||
+      changes.cloudCategoryKeywords ||
+      changes.cloudCategoryUsernames ||
       changes.autoBlockKeywords ||
       changes.disabledCloudKeywords
     ) {

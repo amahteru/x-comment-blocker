@@ -39,6 +39,8 @@ const STORAGE_DEFAULTS = {
   cloudEnabled: true,
   cloudKeywords: '',
   cloudCategoryToggles: {},
+  cloudCategoryKeywords: true,
+  cloudCategoryUsernames: true,
   checkUsername: true,
   onlyComments: true,
   blockSpecialChars: false,
@@ -62,6 +64,17 @@ const STORAGE_DEFAULTS = {
   autoBlockBatchCount: 0,
   whitelist: [],
 };
+
+export function getResolvedCategoryToggles(items = {}) {
+  const toggles = { ...(items.cloudCategoryToggles ?? {}) };
+  if (items.cloudCategoryKeywords === false) {
+    toggles['常规屏蔽词'] ??= false;
+  }
+  if (items.cloudCategoryUsernames === false) {
+    toggles['用户名'] ??= false;
+  }
+  return toggles;
+}
 
 export function getStorageDefaults(...keys) {
   const result = {};
