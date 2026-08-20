@@ -458,11 +458,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     notifyContentScripts({ action: 'clearLocalSentIds' });
     storageQueue
       .enqueue(async () => {
-        if (spamBatchTimer) {
-          clearTimeout(spamBatchTimer);
-          spamBatchTimer = null;
-        }
-        pendingSpamBatch = [];
         inMemoryHistory = [];
         inMemoryBlockedCount = 0;
         globalSpamCache.clear();

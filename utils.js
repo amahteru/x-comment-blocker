@@ -16,7 +16,7 @@ export function isKeywordRegex(k) {
 
 const categoryHeaderRegex = /^#(?:\s*\[(?<bracketName>[^\]]+)\]|\s+(?<spaceName>\S+.*))$/v;
 
-export function isCategoryHeader(line) {
+function isCategoryHeader(line) {
   if (typeof line !== 'string') return false;
   const cleaned = line.replaceAll(invisibleCharsRegex, '').trim();
   return categoryHeaderRegex.test(cleaned);

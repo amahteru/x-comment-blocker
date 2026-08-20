@@ -141,10 +141,10 @@ function updateEnabledState() {
 
 function el(tag, props = {}, children) {
   const element = document.createElement(tag);
-  const { innerHTML, safeHtml, ...rest } = props;
+  const { innerHTML, ...rest } = props;
   Object.assign(element, rest);
-  if (safeHtml || innerHTML) {
-    setSafeHtml(element, safeHtml || innerHTML);
+  if (innerHTML) {
+    setSafeHtml(element, innerHTML);
   }
   if (children) {
     element.append(...children);
@@ -552,7 +552,7 @@ importAllFile.addEventListener('change', async (e) => {
 
 function formatHistoryTime(timestamp) {
   if (!Number.isFinite(timestamp)) return '';
-  const localTz = Temporal.Now.timeZoneId();
+  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const date = Temporal.Instant.fromEpochMilliseconds(timestamp).toZonedDateTimeISO(localTz);
   const now = Temporal.Now.zonedDateTimeISO(localTz);
 
