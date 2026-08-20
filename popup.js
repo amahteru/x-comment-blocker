@@ -3,6 +3,7 @@ import {
   extractCleanScreenName,
   getStorageDefaults,
   isKeywordRegex,
+  parseCategorizedKeywords,
   parseKeywords,
   SYNC_INTERVAL_MS,
 } from './utils.js';
@@ -11,6 +12,8 @@ let userKeywords = [];
 let autoBlockKeywords = new Set();
 let isLoading = true;
 let isEditingAutoBlock = false;
+let cloudCategoryKeywords = true;
+let cloudCategoryUsernames = true;
 
 const ICON_EDIT =
   '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>';
@@ -74,6 +77,9 @@ const cloudKeywordList = document.getElementById('cloudKeywordList');
 const cloudScrollContainer = document.getElementById('cloudScrollContainer');
 const cloudModalSubtitle = document.getElementById('cloudModalSubtitle');
 
+const filterCloudBtn = document.getElementById('filterCloudBtn');
+const cloudFilterDropdown = document.getElementById('cloudFilterDropdown');
+
 const toggleCloudSearchBtn = document.getElementById('toggleCloudSearchBtn');
 const cloudSearchContainer = document.getElementById('cloudSearchContainer');
 const cloudSearchInput = document.getElementById('cloudSearchInput');
@@ -109,6 +115,8 @@ async function autoSave() {
     blockGrok: blockGrokEl.checked,
     enabled: enableToggleEl.checked,
     cloudEnabled: cloudToggleEl.checked,
+    cloudCategoryKeywords,
+    cloudCategoryUsernames,
   });
   showStatus('已自动保存');
 }
@@ -456,6 +464,8 @@ function sanitizeImportedState(obj) {
         'blockGrok',
         'enabled',
         'cloudEnabled',
+        'cloudCategoryKeywords',
+        'cloudCategoryUsernames',
       ].includes(key)
     ) {
       out[key] = value === true;
@@ -550,10 +560,27 @@ function relativeTime(ts) {
 
 async function updateCloudInfo() {
   const items = await chrome.storage.local.get(
-    getStorageDefaults('cloudKeywords', 'lastSyncTime', 'syncStatus', 'syncError'),
+    getStorageDefaults(
+      'cloudKeywords',
+      'lastSyncTime',
+      'syncStatus',
+      'syncError',
+      'cloudCategoryKeywords',
+      'cloudCategoryUsernames',
+    ),
   );
-  const cloudList = parseKeywords(items.cloudKeywords);
-  const countText = cloudList.length > 0 ? `${cloudList.length} 个词` : '';
+  const catKeywords = items.cloudCategoryKeywords ?? true;
+  const catUsernames = items.cloudCategoryUsernames ?? true;
+  let count = 0;
+  if (catKeywords || catUsernames) {
+    const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
+    const activeList = [
+      ...(catKeywords ? categorized.keywords : []),
+      ...(catUsernames ? categorized.usernames : []),
+    ];
+    count = activeList.length;
+  }
+  const countText = count > 0 ? `${count} 个词` : '';
 
   cloudInfoEl.classList.remove('error');
 
@@ -568,12 +595,71 @@ async function updateCloudInfo() {
   }
 }
 
+function updateCloudFilterDropdown() {
+  if (!cloudFilterDropdown) return;
+
+  const kwOption = el('div', {
+    className: `dropdown-option ${cloudCategoryKeywords ? 'active' : ''}`,
+    textContent: '常规屏蔽词',
+    onclick: async (e) => {
+      e.stopPropagation();
+      cloudCategoryKeywords = !cloudCategoryKeywords;
+      kwOption.classList.toggle('active', cloudCategoryKeywords);
+      await chrome.storage.local.set({ cloudCategoryKeywords, cloudCategoryUsernames });
+      renderCloudKeywords();
+      updateCloudInfo();
+      showStatus('已更新分类设置');
+    },
+  });
+
+  const userOption = el('div', {
+    className: `dropdown-option ${cloudCategoryUsernames ? 'active' : ''}`,
+    textContent: '用户名',
+    onclick: async (e) => {
+      e.stopPropagation();
+      cloudCategoryUsernames = !cloudCategoryUsernames;
+      userOption.classList.toggle('active', cloudCategoryUsernames);
+      await chrome.storage.local.set({ cloudCategoryKeywords, cloudCategoryUsernames });
+      renderCloudKeywords();
+      updateCloudInfo();
+      showStatus('已更新分类设置');
+    },
+  });
+
+  cloudFilterDropdown.replaceChildren(kwOption, userOption);
+}
+
 async function renderCloudKeywords() {
   const items = await chrome.storage.local.get(
-    getStorageDefaults('cloudKeywords', 'disabledCloudKeywords'),
+    getStorageDefaults(
+      'cloudKeywords',
+      'disabledCloudKeywords',
+      'cloudCategoryKeywords',
+      'cloudCategoryUsernames',
+    ),
   );
-  let cloudList = parseKeywords(items.cloudKeywords);
+  cloudCategoryKeywords = items.cloudCategoryKeywords ?? true;
+  cloudCategoryUsernames = items.cloudCategoryUsernames ?? true;
+  updateCloudFilterDropdown();
+
   let disabledList = items.disabledCloudKeywords ?? [];
+
+  if (!cloudCategoryKeywords && !cloudCategoryUsernames) {
+    cloudKeywordList.replaceChildren(
+      el('div', {
+        className: 'empty-hint',
+        textContent: '未启用任何云端分类',
+      }),
+    );
+    cloudModalSubtitle.textContent = '';
+    return;
+  }
+
+  const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
+  let cloudList = [
+    ...(cloudCategoryKeywords ? categorized.keywords : []),
+    ...(cloudCategoryUsernames ? categorized.usernames : []),
+  ];
 
   if (currentCloudSearchQuery !== '') {
     cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
@@ -657,6 +743,12 @@ async function renderCloudKeywords() {
   }
 }
 
+if (filterCloudBtn && cloudFilterDropdown) {
+  filterCloudBtn.addEventListener('click', () => {
+    cloudFilterDropdown.classList.toggle('open');
+  });
+}
+
 if (toggleCloudSearchBtn && cloudSearchContainer && cloudSearchInput) {
   toggleCloudSearchBtn.addEventListener('click', () => {
     const isOpen = cloudSearchContainer.classList.toggle('open');
@@ -701,12 +793,23 @@ if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
 
 if (selectAllCloudBtn) {
   selectAllCloudBtn.addEventListener('click', async () => {
-    const { cloudKeywords } = await chrome.storage.local.get(getStorageDefaults('cloudKeywords'));
-    const query = currentCloudSearchQuery;
-
-    const cloudList = parseKeywords(cloudKeywords).filter(
-      (kw) => !query || kw.toLowerCase().includes(query),
+    const items = await chrome.storage.local.get(
+      getStorageDefaults('cloudKeywords', 'cloudCategoryKeywords', 'cloudCategoryUsernames'),
     );
+    const catKeywords = items.cloudCategoryKeywords ?? true;
+    const catUsernames = items.cloudCategoryUsernames ?? true;
+    if (!catKeywords && !catUsernames) return;
+
+    const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
+    let cloudList = [
+      ...(catKeywords ? categorized.keywords : []),
+      ...(catUsernames ? categorized.usernames : []),
+    ];
+
+    const query = currentCloudSearchQuery;
+    if (query) {
+      cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(query));
+    }
 
     if (!cloudList.length) return;
 
@@ -726,6 +829,7 @@ openCloudModalBtn.addEventListener('click', () => {
 
 closeCloudBtn.addEventListener('click', () => {
   cloudModal.classList.remove('open');
+  cloudFilterDropdown?.classList.remove('open');
   if (isEditingCloudAutoBlock) {
     isEditingCloudAutoBlock = false;
     saveCloudAutoBlockBtn.style.display = 'none';
@@ -829,6 +933,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       'blockGrok',
       'enabled',
       'cloudEnabled',
+      'cloudCategoryKeywords',
+      'cloudCategoryUsernames',
       'blockedCount',
       'lastSyncTime',
       'cloudKeywords',
@@ -849,6 +955,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (rawAutoBlockKeywords.length !== autoBlockKeywords.size) {
     await chrome.storage.local.set({ autoBlockKeywords: autoBlockKeywords.values().toArray() });
   }
+
+  cloudCategoryKeywords = items.cloudCategoryKeywords ?? true;
+  cloudCategoryUsernames = items.cloudCategoryUsernames ?? true;
+  updateCloudFilterDropdown();
 
   checkUsernameEl.checked = items.checkUsername;
   onlyCommentsEl.checked = items.onlyComments;
@@ -1041,6 +1151,13 @@ if (filterHistoryBtn && filterDropdown) {
       !e.target.closest('#moreActionsBtn')
     ) {
       moreDropdown.classList.remove('open');
+    }
+    if (
+      cloudFilterDropdown &&
+      !e.target.closest('#cloudFilterDropdown') &&
+      !e.target.closest('#filterCloudBtn')
+    ) {
+      cloudFilterDropdown.classList.remove('open');
     }
   });
 

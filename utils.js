@@ -30,6 +30,8 @@ const STORAGE_DEFAULTS = {
   keywords: '',
   cloudEnabled: true,
   cloudKeywords: '',
+  cloudCategoryKeywords: true,
+  cloudCategoryUsernames: true,
   checkUsername: true,
   onlyComments: true,
   blockSpecialChars: false,
@@ -69,11 +71,36 @@ export function parseKeywords(text) {
   const result = [];
   for (const line of text.split('\n')) {
     const k = line.replaceAll(invisibleCharsRegex, '').trim();
-    if (!k) continue;
+    if (!k || k.startsWith('#')) continue;
     if (isKeywordRegex(k)) {
       result.push(k);
     } else {
       result.push(k.toLowerCase());
+    }
+  }
+  return result;
+}
+
+export function parseCategorizedKeywords(text) {
+  const result = { keywords: [], usernames: [] };
+  if (!text) return result;
+  let currentCategory = 'keywords';
+  for (const line of text.split('\n')) {
+    const cleaned = line.replaceAll(invisibleCharsRegex, '').trim();
+    if (!cleaned) continue;
+    if (cleaned.startsWith('#')) {
+      if (cleaned.includes('用户名')) {
+        currentCategory = 'usernames';
+      } else if (cleaned.includes('常规') || cleaned.includes('默认')) {
+        currentCategory = 'keywords';
+      }
+      continue;
+    }
+    const item = isKeywordRegex(cleaned) ? cleaned : cleaned.toLowerCase();
+    if (currentCategory === 'usernames') {
+      result.usernames.push(item);
+    } else {
+      result.keywords.push(item);
     }
   }
   return result;
@@ -150,6 +177,15 @@ export async function syncCloudKeywords() {
       });
       return true;
     }
+    const normalizedLines = [];
+    for (const line of text.split('\n')) {
+      const cleaned = line.replaceAll(invisibleCharsRegex, '').trim();
+      if (cleaned) {
+        normalizedLines.push(cleaned);
+      }
+    }
+    const normalizedCloudKeywords = normalizedLines.join('\n');
+
     const disabledCloudKeywords = storageItems.disabledCloudKeywords ?? [];
     const autoBlockKeywords = storageItems.autoBlockKeywords ?? [];
     const userKws = parseKeywords(storageItems.keywords);
@@ -162,7 +198,7 @@ export async function syncCloudKeywords() {
     );
 
     await browserApi.storage.local.set({
-      cloudKeywords: cloudList.join('\n'),
+      cloudKeywords: normalizedCloudKeywords,
       disabledCloudKeywords: cleanedDisabled,
       autoBlockKeywords: cleanedAutoBlock,
       cloudETag: newETag,

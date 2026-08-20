@@ -4,6 +4,7 @@
     browserApi: chrome,
     getStorageDefaults,
     parseKeywords,
+    parseCategorizedKeywords,
     invisibleCharsRegex,
     extractCleanScreenName,
   } = await import(browserApi.runtime.getURL('utils.js'));
@@ -81,6 +82,8 @@
           'keywords',
           'cloudEnabled',
           'cloudKeywords',
+          'cloudCategoryKeywords',
+          'cloudCategoryUsernames',
           'autoBlockKeywords',
           'disabledCloudKeywords',
         ),
@@ -88,12 +91,21 @@
 
       const userKws = parseKeywords(items.keywords);
       const disabledCloudKws = items.disabledCloudKeywords ?? [];
-      const cloudKws = items.cloudEnabled
-        ? new Set(parseKeywords(items.cloudKeywords))
-            .difference(new Set(disabledCloudKws))
-            .values()
-            .toArray()
-        : [];
+      let cloudKws = [];
+      if (items.cloudEnabled) {
+        const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
+        const candidateCloudKws = [];
+        if (items.cloudCategoryKeywords ?? true) {
+          candidateCloudKws.push(...categorized.keywords);
+        }
+        if (items.cloudCategoryUsernames ?? true) {
+          candidateCloudKws.push(...categorized.usernames);
+        }
+        cloudKws = new Set(candidateCloudKws)
+          .difference(new Set(disabledCloudKws))
+          .values()
+          .toArray();
+      }
 
       const blockKeywordsSet = new Set([...cloudKws, ...userKws]);
       const blockKeywords = blockKeywordsSet.values().toArray();
@@ -283,6 +295,8 @@
       changes.keywords ||
       changes.cloudEnabled ||
       changes.cloudKeywords ||
+      changes.cloudCategoryKeywords ||
+      changes.cloudCategoryUsernames ||
       changes.autoBlockKeywords ||
       changes.disabledCloudKeywords
     ) {
