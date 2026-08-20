@@ -399,7 +399,6 @@
   }
 
   function detectSpam(
-    tweet,
     textNode,
     userNode,
     rawTweetText,
@@ -423,100 +422,56 @@
       return { isSpam: false };
     }
 
+    const createSpamResult = (isAutoBlock, blockReason) => ({
+      isSpam: true,
+      isAutoBlock,
+      blockReason,
+      userName,
+      stableHandle,
+      displayName,
+      tweetBody,
+    });
+
     if (blockGrok && grokElement) {
-      return {
-        isSpam: true,
-        isAutoBlock: false,
-        blockReason: 'Grok屏蔽',
-        userName,
-        stableHandle,
-        displayName,
-        tweetBody,
-      };
+      return createSpamResult(false, 'Grok屏蔽');
     }
 
     if (isStatusPage && !isMainTweet) {
       if (blockEmoji && textNode && hasEmoji(tweetBody, textNode)) {
-        return {
-          isSpam: true,
-          isAutoBlock: false,
-          blockReason: '表情屏蔽',
-          userName,
-          stableHandle,
-          displayName,
-          tweetBody,
-        };
+        return createSpamResult(false, '表情屏蔽');
       }
       if (blockSpecialChars && textNode && spamCharsRegex.test(tweetBody || textNode.textContent)) {
-        return {
-          isSpam: true,
-          isAutoBlock: false,
-          blockReason: '特殊字符屏蔽',
-          userName,
-          stableHandle,
-          displayName,
-          tweetBody,
-        };
+        return createSpamResult(false, '特殊字符屏蔽');
       }
     }
 
-    const cleanUserName = userName
-      ? userName.replaceAll(/[\s_.\-]+/gv, '').replaceAll(invisibleCharsRegex, '')
-      : '';
     const cleanDisplayName = displayName
       ? displayName.replaceAll(/[\s_.\-]+/gv, '').replaceAll(invisibleCharsRegex, '')
       : '';
 
     if (matchesAutoBlocklist(tweetBody)) {
-      return {
-        isSpam: true,
-        isAutoBlock: true,
-        blockReason: '内容屏蔽',
-        userName,
-        stableHandle,
-        displayName,
-        tweetBody,
-      };
+      return createSpamResult(true, '内容屏蔽');
     }
 
     const userCandidates = Array.from(
-      new Set([displayName, cleanDisplayName, stableHandle, cleanUserName, userName]),
+      new Set([
+        displayName,
+        cleanDisplayName,
+        stableHandle,
+        stableHandle ? `@${stableHandle}` : '',
+      ]),
     ).filter(Boolean);
 
     if (checkUsername && matchesUserRegexes(userCandidates, autoBlockRegexes)) {
-      return {
-        isSpam: true,
-        isAutoBlock: true,
-        blockReason: '昵称屏蔽',
-        userName,
-        stableHandle,
-        displayName,
-        tweetBody,
-      };
+      return createSpamResult(true, '昵称屏蔽');
     }
 
     if (matchesBlocklist(tweetBody)) {
-      return {
-        isSpam: true,
-        isAutoBlock: false,
-        blockReason: '内容屏蔽',
-        userName,
-        stableHandle,
-        displayName,
-        tweetBody,
-      };
+      return createSpamResult(false, '内容屏蔽');
     }
 
     if (checkUsername && matchesUserRegexes(userCandidates, blockRegexes)) {
-      return {
-        isSpam: true,
-        isAutoBlock: false,
-        blockReason: '昵称屏蔽',
-        userName,
-        stableHandle,
-        displayName,
-        tweetBody,
-      };
+      return createSpamResult(false, '昵称屏蔽');
     }
 
     return { isSpam: false };
@@ -570,7 +525,10 @@
           return true;
         }
       } else {
-        return true;
+        const linkText = link.textContent?.trim() || '';
+        if (linkText.startsWith('@')) {
+          return true;
+        }
       }
     }
     return false;
@@ -584,6 +542,7 @@
 
     const pendingSpam = [];
     const pageContext = getPageContext();
+    const isStatusPageBase = !!pageContext.pageStatusId;
     let isPastDiscoverMore = false;
 
     for (let i = 0; i < tweets.length; i++) {
@@ -594,7 +553,9 @@
         tweetStateMap.set(tweet, state);
       }
 
-      const isStatusPage = resolveStatusPage(tweet, pageContext);
+      const isStatusPage = pageContext.isPhotoVideoOverlay
+        ? resolveStatusPage(tweet, pageContext)
+        : isStatusPageBase;
       let logicalPageStatusId = pageContext.pageStatusId;
       if (pageContext.isPhotoVideoOverlay && tweet.closest('[role="dialog"]') === null) {
         logicalPageStatusId = state.pageStatusId ?? pageContext.pageStatusId;
@@ -618,20 +579,41 @@
       }
       state.isDiscoverMore = isDiscoverMore;
 
+      const article = tweet.querySelector('article');
+      if (!article) {
+        state.quickHash = '';
+        continue;
+      }
+
       const userNode = tweet.querySelector('[data-testid="User-Name"]');
       const textNode = tweet.querySelector('[data-testid="tweetText"]');
       const rawTweetText = textNode ? getTweetTextForKeywords(textNode) : '';
-      const rawUserName = userNode ? getTweetTextForKeywords(userNode) : '';
+      const rawUserName = userNode?.textContent ?? '';
       const grokElement = blockGrok ? getGrokShareElement(tweet) : null;
       const hasGrok = !!grokElement;
 
       const quickHash = `${rawTweetText}|${rawUserName}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}|${hasGrok}|${isDiscoverMore}`;
       if (state.quickHash === quickHash) {
         if (state.isSpam) {
+          tweet.classList.remove('x-comment-blocker-hidden-reply');
           tweet.classList.add('x-comment-blocker-hidden');
-        } else {
-          tweet.classList.remove('x-comment-blocker-hidden');
+          continue;
         }
+
+        const prev = tweet.previousElementSibling;
+        const isPrevHidden =
+          !isDiscoverMore &&
+          prev &&
+          (prev.classList.contains('x-comment-blocker-hidden') ||
+            prev.classList.contains('x-comment-blocker-hidden-reply'));
+        const isHiddenReply = isPrevHidden && isReplyToParent(tweet, userNode, textNode);
+
+        if (isHiddenReply) {
+          tweet.classList.add('x-comment-blocker-hidden-reply');
+        } else {
+          tweet.classList.remove('x-comment-blocker-hidden-reply');
+        }
+        tweet.classList.remove('x-comment-blocker-hidden');
         continue;
       }
 
@@ -649,10 +631,6 @@
 
         if (isStatusPage && logicalPageStatusId) {
           isMainTweet = statusInfo.isMainTweet;
-          if (!tweet.querySelector('article')) {
-            state.quickHash = '';
-            continue;
-          }
         }
       }
 
@@ -661,7 +639,6 @@
       const effectiveStatusPage = isStatusPage && !isDiscoverMore;
       const spamResult = shouldCheck
         ? detectSpam(
-            tweet,
             textNode,
             userNode,
             rawTweetText,
@@ -682,10 +659,7 @@
         tweet.classList.remove('x-comment-blocker-hidden-reply');
         tweet.classList.add('x-comment-blocker-hidden');
 
-        let normalizedBody = (tweetBody || rawTweetText)
-          .replaceAll(invisibleCharsRegex, '')
-          .replaceAll(/\s+/gv, ' ')
-          .trim();
+        let normalizedBody = (tweetBody || rawTweetText).replaceAll(/\s+/gv, ' ').trim();
 
         if (blockReason === 'Grok屏蔽' && grokElement) {
           const grokLink = grokElement.getAttribute('content') || grokElement.href || '';
