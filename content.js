@@ -225,7 +225,7 @@
 
         if (pendingTweets.size > 0 && !observerFlushScheduled) {
           observerFlushScheduled = true;
-          requestAnimationFrame(() => {
+          queueMicrotask(() => {
             observerFlushScheduled = false;
             if (pendingTweets.size > 0) {
               filterTweets(pendingTweets.values().toArray());
@@ -354,9 +354,9 @@
   }
 
   function getTweetStatusInfo(tweet, pageStatusId) {
-    const timeEl = tweet.querySelector('time');
-    if (timeEl) {
-      const href = timeEl.closest('a')?.getAttribute('href');
+    const timeElements = tweet.querySelectorAll('time');
+    for (let i = 0; i < timeElements.length; i++) {
+      const href = timeElements[i].closest('a')?.getAttribute('href');
       if (href) {
         const match = href.match(/\/status\/(\d+)/iv);
         if (match) {
@@ -410,7 +410,7 @@
     if (handleLink) {
       const rawHref = handleLink.getAttribute('href') || '';
       stableHandle = extractCleanScreenName(rawHref);
-      displayName = userName.replaceAll(invisibleCharsRegex, '').trim();
+      displayName = getTweetTextForKeywords(handleLink).replaceAll(invisibleCharsRegex, '').trim();
     }
 
     if (stableHandle && whitelistSet.has(stableHandle)) {
@@ -454,7 +454,6 @@
     const cleanUserName = userName
       ? userName.replaceAll(/[\s_.\-]+/gv, '').replaceAll(invisibleCharsRegex, '')
       : '';
-    const combinedUser = `${cleanUserName} ${userName} ${stableHandle}`.trim();
 
     if (matchesAutoBlocklist(tweetBody)) {
       return {
@@ -467,7 +466,13 @@
       };
     }
 
-    if (checkUsername && combinedUser && matchesAutoBlocklist(combinedUser)) {
+    const userCandidates = [cleanUserName, userName, stableHandle].filter(Boolean);
+    const matchesUserRegexes = (regexes) => {
+      if (!regexes.length || !userCandidates.length) return false;
+      return userCandidates.some((c) => regexes.some((r) => r.test(c)));
+    };
+
+    if (checkUsername && matchesUserRegexes(autoBlockRegexes)) {
       return {
         isSpam: true,
         isAutoBlock: true,
@@ -489,7 +494,7 @@
       };
     }
 
-    if (checkUsername && combinedUser && matchesBlocklist(combinedUser)) {
+    if (checkUsername && matchesUserRegexes(blockRegexes)) {
       return {
         isSpam: true,
         isAutoBlock: false,
@@ -512,17 +517,17 @@
   function isAfterDiscoverMore(tweet) {
     let curr = tweet.previousElementSibling;
     while (curr) {
+      if (isDiscoverMoreHeader(curr)) return true;
       const prevState = tweetStateMap.get(curr);
       if (prevState?.isDiscoverMore !== undefined) {
         return prevState.isDiscoverMore;
       }
-      if (isDiscoverMoreHeader(curr)) return true;
       curr = curr.previousElementSibling;
     }
     return false;
   }
 
-  function isReplyToParent(tweet) {
+  function isReplyToParent(tweet, userNode = null, textNode = null) {
     if (tweet.querySelector('div[style*="width: 2px"], div[style*="width:2px"]')) {
       return true;
     }
@@ -530,14 +535,14 @@
     const article = tweet.querySelector('article');
     if (!article) return false;
 
-    const userNode = tweet.querySelector('[data-testid="User-Name"]');
-    const textNode = tweet.querySelector('[data-testid="tweetText"]');
+    const actualUserNode = userNode ?? tweet.querySelector('[data-testid="User-Name"]');
+    const actualTextNode = textNode ?? tweet.querySelector('[data-testid="tweetText"]');
     const allLinks = article.querySelectorAll('a[href^="/"]');
 
     for (let i = 0; i < allLinks.length; i++) {
       const link = allLinks[i];
-      if (userNode?.contains(link)) continue;
-      if (textNode?.contains(link)) continue;
+      if (actualUserNode?.contains(link)) continue;
+      if (actualTextNode?.contains(link)) continue;
       if (link.querySelector('time') || link.closest('time')) continue;
       if (
         link.querySelector('img') ||
@@ -546,8 +551,8 @@
         continue;
       }
 
-      if (textNode) {
-        if (link.compareDocumentPosition(textNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
+      if (actualTextNode) {
+        if (link.compareDocumentPosition(actualTextNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
           return true;
         }
       } else {
@@ -587,10 +592,12 @@
       let isDiscoverMore = false;
       if (isStatusPage) {
         if (!specificTweets) {
-          if (!isPastDiscoverMore && isDiscoverMoreHeader(tweet)) {
+          if (isDiscoverMoreHeader(tweet)) {
             isPastDiscoverMore = true;
+            isDiscoverMore = false;
+          } else {
+            isDiscoverMore = isPastDiscoverMore;
           }
-          isDiscoverMore = isPastDiscoverMore;
         } else {
           isDiscoverMore = isAfterDiscoverMore(tweet);
         }
@@ -599,12 +606,12 @@
 
       const userNode = tweet.querySelector('[data-testid="User-Name"]');
       const textNode = tweet.querySelector('[data-testid="tweetText"]');
-      const textContent = textNode?.textContent ?? '';
-      const userContent = userNode?.textContent ?? '';
+      const rawTweetText = textNode ? getTweetTextForKeywords(textNode) : '';
+      const rawUserName = userNode ? getTweetTextForKeywords(userNode) : '';
       const hasGrok = blockGrok ? hasGrokCard(tweet) : false;
 
-      const shallowHash = `${textContent}|${userContent}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}|${hasGrok}|${isDiscoverMore}`;
-      if (state.shallowHash === shallowHash) {
+      const quickHash = `${rawTweetText}|${rawUserName}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}|${hasGrok}|${isDiscoverMore}`;
+      if (state.quickHash === quickHash) {
         if (state.isSpam) {
           tweet.classList.add('x-comment-blocker-hidden');
         } else {
@@ -628,16 +635,13 @@
         if (isStatusPage && logicalPageStatusId) {
           isMainTweet = statusInfo.isMainTweet;
           if (!tweet.querySelector('article')) {
-            state.shallowHash = '';
+            state.quickHash = '';
             continue;
           }
         }
       }
 
       if (shouldCheck && onlyComments && (isMainTweet || isDiscoverMore)) shouldCheck = false;
-
-      const rawTweetText = textNode ? getTweetTextForKeywords(textNode) : '';
-      const rawUserName = userNode ? getTweetTextForKeywords(userNode) : '';
 
       const effectiveStatusPage = isStatusPage && !isDiscoverMore;
       const spamResult = shouldCheck
@@ -653,7 +657,7 @@
         : null;
       const isSpam = spamResult?.isSpam ?? false;
 
-      state.shallowHash = shallowHash;
+      state.quickHash = quickHash;
       state.isSpam = isSpam;
 
       if (isSpam) {
@@ -705,7 +709,7 @@
           (prev.classList.contains('x-comment-blocker-hidden') ||
             prev.classList.contains('x-comment-blocker-hidden-reply'))
         ) {
-          if (isReplyToParent(tweet)) {
+          if (isReplyToParent(tweet, userNode, textNode)) {
             isHiddenReply = true;
           }
         }
