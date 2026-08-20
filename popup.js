@@ -590,9 +590,11 @@ async function updateCloudInfo() {
       'syncStatus',
       'syncError',
       'cloudCategoryToggles',
+      'cloudCategoryKeywords',
+      'cloudCategoryUsernames',
     ),
   );
-  const toggles = items.cloudCategoryToggles ?? {};
+  const toggles = getResolvedCategoryToggles(items);
   const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
   let count = 0;
   for (const [catName, list] of Object.entries(categorized)) {
@@ -625,21 +627,19 @@ function updateCloudFilterDropdown(categorized = {}) {
 
   const options = categories.map((catName) => {
     const isActive = cloudCategoryToggles[catName] ?? true;
-    const opt = el('div', {
+    return el('div', {
       className: `dropdown-option ${isActive ? 'active' : ''}`,
       textContent: catName,
       onclick: async (e) => {
         e.stopPropagation();
         const nextState = !(cloudCategoryToggles[catName] ?? true);
         cloudCategoryToggles[catName] = nextState;
-        opt.classList.toggle('active', nextState);
         await chrome.storage.local.set({ cloudCategoryToggles });
         renderCloudKeywords();
         updateCloudInfo();
         showStatus('已更新分类设置');
       },
     });
-    return opt;
   });
 
   cloudFilterDropdown.replaceChildren(...options);
@@ -647,9 +647,15 @@ function updateCloudFilterDropdown(categorized = {}) {
 
 async function renderCloudKeywords() {
   const items = await chrome.storage.local.get(
-    getStorageDefaults('cloudKeywords', 'disabledCloudKeywords', 'cloudCategoryToggles'),
+    getStorageDefaults(
+      'cloudKeywords',
+      'disabledCloudKeywords',
+      'cloudCategoryToggles',
+      'cloudCategoryKeywords',
+      'cloudCategoryUsernames',
+    ),
   );
-  cloudCategoryToggles = items.cloudCategoryToggles ?? {};
+  cloudCategoryToggles = getResolvedCategoryToggles(items);
   const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
   updateCloudFilterDropdown(categorized);
 
@@ -811,9 +817,14 @@ if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
 if (selectAllCloudBtn) {
   selectAllCloudBtn.addEventListener('click', async () => {
     const items = await chrome.storage.local.get(
-      getStorageDefaults('cloudKeywords', 'cloudCategoryToggles'),
+      getStorageDefaults(
+        'cloudKeywords',
+        'cloudCategoryToggles',
+        'cloudCategoryKeywords',
+        'cloudCategoryUsernames',
+      ),
     );
-    const toggles = items.cloudCategoryToggles ?? {};
+    const toggles = getResolvedCategoryToggles(items);
     const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
     const activeCategories = Object.keys(categorized).filter((catName) => toggles[catName] ?? true);
     if (Object.keys(categorized).length > 0 && activeCategories.length === 0) return;
@@ -976,7 +987,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   cloudCategoryToggles = getResolvedCategoryToggles(items);
-  updateCloudFilterDropdown(parseCategorizedKeywords(items.cloudKeywords ?? ''));
 
   checkUsernameEl.checked = items.checkUsername;
   onlyCommentsEl.checked = items.onlyComments;

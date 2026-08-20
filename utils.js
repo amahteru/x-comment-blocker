@@ -68,10 +68,10 @@ const STORAGE_DEFAULTS = {
 export function getResolvedCategoryToggles(items = {}) {
   const toggles = { ...(items.cloudCategoryToggles ?? {}) };
   if (items.cloudCategoryKeywords === false) {
-    toggles['常规屏蔽词'] ??= false;
+    toggles.常规屏蔽词 ??= false;
   }
   if (items.cloudCategoryUsernames === false) {
-    toggles['用户名'] ??= false;
+    toggles.用户名 ??= false;
   }
   return toggles;
 }
@@ -91,7 +91,7 @@ export function parseKeywords(text) {
   const result = [];
   for (const line of text.split('\n')) {
     const k = line.replaceAll(invisibleCharsRegex, '').trim();
-    if (!k || isCategoryHeader(k)) continue;
+    if (!k || k === '#' || isCategoryHeader(k)) continue;
     if (isKeywordRegex(k)) {
       result.push(k);
     } else {
@@ -109,7 +109,7 @@ export function parseCategorizedKeywords(text) {
 
   for (const line of text.split('\n')) {
     const cleaned = line.replaceAll(invisibleCharsRegex, '').trim();
-    if (!cleaned) continue;
+    if (!cleaned || cleaned === '#') continue;
 
     const headerMatch = categoryHeaderRegex.exec(cleaned);
     if (headerMatch) {
@@ -125,8 +125,8 @@ export function parseCategorizedKeywords(text) {
     result[currentCategory].push(item);
   }
 
-  if (result['常规屏蔽词'] && result['常规屏蔽词'].length === 0 && Object.keys(result).length > 1) {
-    delete result['常规屏蔽词'];
+  if (result.常规屏蔽词 && result.常规屏蔽词.length === 0 && Object.keys(result).length > 1) {
+    delete result.常规屏蔽词;
   }
 
   return result;
