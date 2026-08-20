@@ -462,7 +462,7 @@
 
     const cleanDisplayName =
       displayName && /[\s_.\-]+/v.test(displayName)
-        ? displayName.replaceAll(/[\s_.\-]+/gv, '').replaceAll(invisibleCharsRegex, '')
+        ? displayName.replaceAll(/[\s_.\-]+/gv, '')
         : displayName;
 
     if (matchesAutoBlocklist(tweetBody)) {
@@ -509,17 +509,25 @@
     return false;
   }
 
-  function isReplyToParent(tweet, userNode = null, textNode = null) {
+  function getPreviousArticleCell(tweet) {
+    let curr = tweet.previousElementSibling;
+    while (curr && !curr.querySelector('article')) {
+      curr = curr.previousElementSibling;
+    }
+    return curr;
+  }
+
+  function isReplyToParent(tweet, userNode = null, textNode = null, article = null) {
     if (tweet.querySelector('div[style*="width: 2px"], div[style*="width:2px"]')) {
       return true;
     }
 
-    const article = tweet.querySelector('article');
-    if (!article) return false;
+    const actualArticle = article ?? tweet.querySelector('article');
+    if (!actualArticle) return false;
 
     const actualUserNode = userNode ?? tweet.querySelector('[data-testid="User-Name"]');
     const actualTextNode = textNode ?? tweet.querySelector('[data-testid="tweetText"]');
-    const allLinks = article.querySelectorAll('a[href^="/"]');
+    const allLinks = actualArticle.querySelectorAll('a[href^="/"]');
 
     for (let i = 0; i < allLinks.length; i++) {
       const link = allLinks[i];
@@ -528,13 +536,6 @@
 
       if (actualUserNode?.contains(link)) continue;
       if (actualTextNode?.contains(link)) continue;
-      if (link.querySelector('time') || link.closest('time')) continue;
-      if (
-        link.querySelector('img') ||
-        link.closest('[data-testid*="Avatar"], [data-testid*="avatar"]')
-      ) {
-        continue;
-      }
 
       if (actualTextNode) {
         if (link.compareDocumentPosition(actualTextNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
@@ -545,6 +546,23 @@
       }
     }
     return false;
+  }
+
+  function updateReplyHiding(tweet, userNode, textNode, article, isDiscoverMore) {
+    const prev = getPreviousArticleCell(tweet);
+    const isPrevHidden =
+      !isDiscoverMore &&
+      prev &&
+      (prev.classList.contains('x-comment-blocker-hidden') ||
+        prev.classList.contains('x-comment-blocker-hidden-reply'));
+    const isHiddenReply = isPrevHidden && isReplyToParent(tweet, userNode, textNode, article);
+
+    if (isHiddenReply) {
+      tweet.classList.add('x-comment-blocker-hidden-reply');
+    } else {
+      tweet.classList.remove('x-comment-blocker-hidden-reply');
+    }
+    tweet.classList.remove('x-comment-blocker-hidden');
   }
 
   function filterTweets(specificTweets = null) {
@@ -613,20 +631,7 @@
           continue;
         }
 
-        const prev = tweet.previousElementSibling;
-        const isPrevHidden =
-          !isDiscoverMore &&
-          prev &&
-          (prev.classList.contains('x-comment-blocker-hidden') ||
-            prev.classList.contains('x-comment-blocker-hidden-reply'));
-        const isHiddenReply = isPrevHidden && isReplyToParent(tweet, userNode, textNode);
-
-        if (isHiddenReply) {
-          tweet.classList.add('x-comment-blocker-hidden-reply');
-        } else {
-          tweet.classList.remove('x-comment-blocker-hidden-reply');
-        }
-        tweet.classList.remove('x-comment-blocker-hidden');
+        updateReplyHiding(tweet, userNode, textNode, article, isDiscoverMore);
         continue;
       }
 
@@ -703,27 +708,7 @@
           });
         }
       } else {
-        const prev = tweet.previousElementSibling;
-        let isHiddenReply = false;
-
-        if (
-          !isDiscoverMore &&
-          prev &&
-          (prev.classList.contains('x-comment-blocker-hidden') ||
-            prev.classList.contains('x-comment-blocker-hidden-reply'))
-        ) {
-          if (isReplyToParent(tweet, userNode, textNode)) {
-            isHiddenReply = true;
-          }
-        }
-
-        if (isHiddenReply) {
-          tweet.classList.add('x-comment-blocker-hidden-reply');
-        } else {
-          tweet.classList.remove('x-comment-blocker-hidden-reply');
-        }
-
-        tweet.classList.remove('x-comment-blocker-hidden');
+        updateReplyHiding(tweet, userNode, textNode, article, isDiscoverMore);
       }
     }
 
