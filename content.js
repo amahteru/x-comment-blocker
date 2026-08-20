@@ -519,6 +519,54 @@
     return { isSpam: false };
   }
 
+  function isDiscoverMoreHeader(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+    if (node.querySelector('article')) return false;
+    return !!node.querySelector('h2, [role="heading"]');
+  }
+
+  function isAfterDiscoverMore(tweet) {
+    let curr = tweet.previousElementSibling;
+    while (curr) {
+      if (isDiscoverMoreHeader(curr)) return true;
+      curr = curr.previousElementSibling;
+    }
+    return false;
+  }
+
+  function isReplyToParent(tweet) {
+    const hasThreadLine =
+      !!tweet.querySelector('div[style*="width: 2px"]') ||
+      !!tweet.querySelector('div[style*="width:2px"]');
+    if (hasThreadLine) return true;
+
+    const userNode = tweet.querySelector('[data-testid="User-Name"]');
+    const textNode = tweet.querySelector('[data-testid="tweetText"]');
+    const article = tweet.querySelector('article');
+    if (!article) return false;
+
+    const allLinks = Array.from(article.querySelectorAll('a[href^="/"]'));
+    for (const link of allLinks) {
+      if (userNode?.contains(link)) continue;
+      if (textNode?.contains(link)) continue;
+      if (link.querySelector('time') || link.closest('time')) continue;
+      if (
+        link.querySelector('img') ||
+        link.closest('[data-testid*="Avatar"], [data-testid*="avatar"]')
+      )
+        continue;
+
+      if (textNode) {
+        if (link.compareDocumentPosition(textNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          return true;
+        }
+      } else {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function filterTweets(specificTweets = null) {
     if (!isExtensionAlive()) return;
 
@@ -547,11 +595,12 @@
       }
       state.isStatusPage = isStatusPage;
 
+      const isDiscoverMore = isStatusPage ? isAfterDiscoverMore(tweet) : false;
       const rawTweetText = textNode ? getTweetTextForKeywords(textNode) : '';
       const rawUserName = userNode ? getTweetTextForKeywords(userNode) : '';
       const hasGrok = blockGrok ? hasGrokCard(tweet) : false;
 
-      const quickHash = `${rawTweetText}|${rawUserName}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}|${hasGrok}`;
+      const quickHash = `${rawTweetText}|${rawUserName}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}|${hasGrok}|${isDiscoverMore}`;
       if (state.quickHash === quickHash) {
         if (state.isSpam) {
           tweet.classList.add('x-comment-blocker-hidden');
@@ -583,8 +632,9 @@
         }
       }
 
-      if (shouldCheck && onlyComments && isMainTweet) shouldCheck = false;
+      if (shouldCheck && onlyComments && (isMainTweet || isDiscoverMore)) shouldCheck = false;
 
+      const effectiveStatusPage = isStatusPage && !isDiscoverMore;
       const spamResult = shouldCheck
         ? detectSpam(
             tweet,
@@ -592,7 +642,7 @@
             userNode,
             rawTweetText,
             rawUserName,
-            isStatusPage,
+            effectiveStatusPage,
             isMainTweet,
           )
         : null;
@@ -643,15 +693,12 @@
         let isHiddenReply = false;
 
         if (
+          !isDiscoverMore &&
           prev &&
           (prev.classList.contains('x-comment-blocker-hidden') ||
             prev.classList.contains('x-comment-blocker-hidden-reply'))
         ) {
-          const hasThreadLine =
-            !!tweet.querySelector('div[style*="width: 2px"]') ||
-            !!tweet.querySelector('[class*="r-1d2f490"]');
-          const hasReplyingTo = !!tweet.querySelector('div[dir="ltr"] a[href^="/"]');
-          if (hasThreadLine || hasReplyingTo) {
+          if (isReplyToParent(tweet)) {
             isHiddenReply = true;
           }
         }
