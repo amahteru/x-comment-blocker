@@ -341,11 +341,9 @@
     return text;
   }
 
-  function hasEmoji(node) {
+  function hasEmoji(text, node) {
+    if (text && emojiRegex.test(text)) return true;
     if (!node) return false;
-
-    if (emojiRegex.test(node.textContent ?? '')) return true;
-
     return Iterator.from(node.querySelectorAll('img')).some((img) => {
       const src = img.src ?? '';
       if (src.includes('emoji') || src.includes('twemoji')) return true;
@@ -355,19 +353,21 @@
 
   function getTweetStatusInfo(tweet, pageStatusId) {
     const timeElements = tweet.querySelectorAll('time');
+    let firstFoundId = null;
     for (let i = 0; i < timeElements.length; i++) {
       const href = timeElements[i].closest('a')?.getAttribute('href');
       if (href) {
         const match = href.match(/\/status\/(\d+)/iv);
         if (match) {
-          return {
-            id: match[1],
-            isMainTweet: pageStatusId ? match[1] === pageStatusId : false,
-          };
+          const id = match[1];
+          if (pageStatusId && id === pageStatusId) {
+            return { id, isMainTweet: true };
+          }
+          firstFoundId ??= id;
         }
       }
     }
-    return { id: null, isMainTweet: false };
+    return { id: firstFoundId, isMainTweet: false };
   }
 
   function getPageContext() {
@@ -388,9 +388,14 @@
     return !!pageContext.pageStatusId;
   }
 
-  function hasGrokCard(tweet) {
-    if (!tweet) return false;
-    return !!tweet.querySelector('a[href*="/i/grok/share"], meta[content*="/i/grok/share"]');
+  function getGrokShareElement(tweet) {
+    if (!tweet) return null;
+    return tweet.querySelector('a[href*="/i/grok/share"], meta[content*="/i/grok/share"]');
+  }
+
+  function matchesUserRegexes(candidates, regexes) {
+    if (!regexes.length || !candidates.length) return false;
+    return candidates.some((c) => regexes.some((r) => r.test(c)));
   }
 
   function detectSpam(
@@ -401,6 +406,7 @@
     userName,
     isStatusPage,
     isMainTweet,
+    grokElement = null,
   ) {
     const tweetBody = rawTweetText.replaceAll(invisibleCharsRegex, '');
     let stableHandle = '';
@@ -417,7 +423,7 @@
       return { isSpam: false };
     }
 
-    if (blockGrok && hasGrokCard(tweet)) {
+    if (blockGrok && grokElement) {
       return {
         isSpam: true,
         isAutoBlock: false,
@@ -425,11 +431,12 @@
         userName,
         stableHandle,
         displayName,
+        tweetBody,
       };
     }
 
     if (isStatusPage && !isMainTweet) {
-      if (blockEmoji && textNode && hasEmoji(textNode)) {
+      if (blockEmoji && textNode && hasEmoji(tweetBody, textNode)) {
         return {
           isSpam: true,
           isAutoBlock: false,
@@ -437,9 +444,10 @@
           userName,
           stableHandle,
           displayName,
+          tweetBody,
         };
       }
-      if (blockSpecialChars && textNode && spamCharsRegex.test(textNode.textContent)) {
+      if (blockSpecialChars && textNode && spamCharsRegex.test(tweetBody || textNode.textContent)) {
         return {
           isSpam: true,
           isAutoBlock: false,
@@ -447,12 +455,16 @@
           userName,
           stableHandle,
           displayName,
+          tweetBody,
         };
       }
     }
 
     const cleanUserName = userName
       ? userName.replaceAll(/[\s_.\-]+/gv, '').replaceAll(invisibleCharsRegex, '')
+      : '';
+    const cleanDisplayName = displayName
+      ? displayName.replaceAll(/[\s_.\-]+/gv, '').replaceAll(invisibleCharsRegex, '')
       : '';
 
     if (matchesAutoBlocklist(tweetBody)) {
@@ -463,16 +475,15 @@
         userName,
         stableHandle,
         displayName,
+        tweetBody,
       };
     }
 
-    const userCandidates = [cleanUserName, userName, stableHandle].filter(Boolean);
-    const matchesUserRegexes = (regexes) => {
-      if (!regexes.length || !userCandidates.length) return false;
-      return userCandidates.some((c) => regexes.some((r) => r.test(c)));
-    };
+    const userCandidates = Array.from(
+      new Set([displayName, cleanDisplayName, stableHandle, cleanUserName, userName]),
+    ).filter(Boolean);
 
-    if (checkUsername && matchesUserRegexes(autoBlockRegexes)) {
+    if (checkUsername && matchesUserRegexes(userCandidates, autoBlockRegexes)) {
       return {
         isSpam: true,
         isAutoBlock: true,
@@ -480,6 +491,7 @@
         userName,
         stableHandle,
         displayName,
+        tweetBody,
       };
     }
 
@@ -491,10 +503,11 @@
         userName,
         stableHandle,
         displayName,
+        tweetBody,
       };
     }
 
-    if (checkUsername && matchesUserRegexes(blockRegexes)) {
+    if (checkUsername && matchesUserRegexes(userCandidates, blockRegexes)) {
       return {
         isSpam: true,
         isAutoBlock: false,
@@ -502,6 +515,7 @@
         userName,
         stableHandle,
         displayName,
+        tweetBody,
       };
     }
 
@@ -608,7 +622,8 @@
       const textNode = tweet.querySelector('[data-testid="tweetText"]');
       const rawTweetText = textNode ? getTweetTextForKeywords(textNode) : '';
       const rawUserName = userNode ? getTweetTextForKeywords(userNode) : '';
-      const hasGrok = blockGrok ? hasGrokCard(tweet) : false;
+      const grokElement = blockGrok ? getGrokShareElement(tweet) : null;
+      const hasGrok = !!grokElement;
 
       const quickHash = `${rawTweetText}|${rawUserName}|${filterVersion}|${isStatusPage}|${logicalPageStatusId || ''}|${hasGrok}|${isDiscoverMore}`;
       if (state.quickHash === quickHash) {
@@ -653,6 +668,7 @@
             rawUserName,
             effectiveStatusPage,
             isMainTweet,
+            grokElement,
           )
         : null;
       const isSpam = spamResult?.isSpam ?? false;
@@ -661,19 +677,18 @@
       state.isSpam = isSpam;
 
       if (isSpam) {
-        const { isAutoBlock, blockReason, userName, stableHandle, displayName } = spamResult;
+        const { isAutoBlock, blockReason, userName, stableHandle, displayName, tweetBody } =
+          spamResult;
         tweet.classList.remove('x-comment-blocker-hidden-reply');
         tweet.classList.add('x-comment-blocker-hidden');
-        let normalizedBody = rawTweetText
+
+        let normalizedBody = (tweetBody || rawTweetText)
           .replaceAll(invisibleCharsRegex, '')
           .replaceAll(/\s+/gv, ' ')
           .trim();
 
-        if (blockReason === 'Grok屏蔽') {
-          const grokMeta = tweet.querySelector(
-            'a[href*="/i/grok/share"], meta[content*="/i/grok/share"]',
-          );
-          const grokLink = grokMeta ? grokMeta.getAttribute('content') || grokMeta.href : '';
+        if (blockReason === 'Grok屏蔽' && grokElement) {
+          const grokLink = grokElement.getAttribute('content') || grokElement.href || '';
           if (grokLink) {
             normalizedBody = normalizedBody ? `${normalizedBody}\n${grokLink}` : grokLink;
           }
