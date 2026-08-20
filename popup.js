@@ -12,8 +12,7 @@ let userKeywords = [];
 let autoBlockKeywords = new Set();
 let isLoading = true;
 let isEditingAutoBlock = false;
-let cloudCategoryKeywords = true;
-let cloudCategoryUsernames = true;
+let cloudCategoryToggles = {};
 
 const ICON_EDIT =
   '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>';
@@ -115,8 +114,7 @@ async function autoSave() {
     blockGrok: blockGrokEl.checked,
     enabled: enableToggleEl.checked,
     cloudEnabled: cloudToggleEl.checked,
-    cloudCategoryKeywords,
-    cloudCategoryUsernames,
+    cloudCategoryToggles,
   });
   showStatus('已自动保存');
 }
@@ -464,11 +462,19 @@ function sanitizeImportedState(obj) {
         'blockGrok',
         'enabled',
         'cloudEnabled',
-        'cloudCategoryKeywords',
-        'cloudCategoryUsernames',
       ].includes(key)
     ) {
       out[key] = value === true;
+    } else if (key === 'cloudCategoryToggles') {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const toggles = {};
+        for (const [k, v] of Object.entries(value)) {
+          if (typeof k === 'string') toggles[k] = v === true;
+        }
+        out[key] = toggles;
+      } else {
+        out[key] = {};
+      }
     } else if (
       [
         'keywords',
@@ -488,6 +494,11 @@ function sanitizeImportedState(obj) {
     } else {
       out[key] = value;
     }
+  }
+  if (obj.cloudCategoryKeywords !== undefined || obj.cloudCategoryUsernames !== undefined) {
+    out.cloudCategoryToggles = out.cloudCategoryToggles || {};
+    if (obj.cloudCategoryKeywords === false) out.cloudCategoryToggles['常规屏蔽词'] = false;
+    if (obj.cloudCategoryUsernames === false) out.cloudCategoryToggles['用户名'] = false;
   }
   return out;
 }
@@ -565,20 +576,16 @@ async function updateCloudInfo() {
       'lastSyncTime',
       'syncStatus',
       'syncError',
-      'cloudCategoryKeywords',
-      'cloudCategoryUsernames',
+      'cloudCategoryToggles',
     ),
   );
-  const catKeywords = items.cloudCategoryKeywords ?? true;
-  const catUsernames = items.cloudCategoryUsernames ?? true;
+  const toggles = items.cloudCategoryToggles ?? {};
+  const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
   let count = 0;
-  if (catKeywords || catUsernames) {
-    const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
-    const activeList = [
-      ...(catKeywords ? categorized.keywords : []),
-      ...(catUsernames ? categorized.usernames : []),
-    ];
-    count = activeList.length;
+  for (const [catName, list] of Object.entries(categorized)) {
+    if (toggles[catName] ?? true) {
+      count += list.length;
+    }
   }
   const countText = count > 0 ? `${count} 个词` : '';
 
@@ -595,56 +602,51 @@ async function updateCloudInfo() {
   }
 }
 
-function updateCloudFilterDropdown() {
+function updateCloudFilterDropdown(categorized = {}) {
   if (!cloudFilterDropdown) return;
 
-  const kwOption = el('div', {
-    className: `dropdown-option ${cloudCategoryKeywords ? 'active' : ''}`,
-    textContent: '常规屏蔽词',
-    onclick: async (e) => {
-      e.stopPropagation();
-      cloudCategoryKeywords = !cloudCategoryKeywords;
-      kwOption.classList.toggle('active', cloudCategoryKeywords);
-      await chrome.storage.local.set({ cloudCategoryKeywords, cloudCategoryUsernames });
-      renderCloudKeywords();
-      updateCloudInfo();
-      showStatus('已更新分类设置');
-    },
+  const categories = Object.keys(categorized);
+  if (categories.length === 0) {
+    categories.push('常规屏蔽词');
+  }
+
+  const options = categories.map((catName) => {
+    const isActive = cloudCategoryToggles[catName] ?? true;
+    const opt = el('div', {
+      className: `dropdown-option ${isActive ? 'active' : ''}`,
+      textContent: catName,
+      onclick: async (e) => {
+        e.stopPropagation();
+        const nextState = !(cloudCategoryToggles[catName] ?? true);
+        cloudCategoryToggles[catName] = nextState;
+        opt.classList.toggle('active', nextState);
+        await chrome.storage.local.set({ cloudCategoryToggles });
+        renderCloudKeywords();
+        updateCloudInfo();
+        showStatus('已更新分类设置');
+      },
+    });
+    return opt;
   });
 
-  const userOption = el('div', {
-    className: `dropdown-option ${cloudCategoryUsernames ? 'active' : ''}`,
-    textContent: '用户名',
-    onclick: async (e) => {
-      e.stopPropagation();
-      cloudCategoryUsernames = !cloudCategoryUsernames;
-      userOption.classList.toggle('active', cloudCategoryUsernames);
-      await chrome.storage.local.set({ cloudCategoryKeywords, cloudCategoryUsernames });
-      renderCloudKeywords();
-      updateCloudInfo();
-      showStatus('已更新分类设置');
-    },
-  });
-
-  cloudFilterDropdown.replaceChildren(kwOption, userOption);
+  cloudFilterDropdown.replaceChildren(...options);
 }
 
 async function renderCloudKeywords() {
   const items = await chrome.storage.local.get(
-    getStorageDefaults(
-      'cloudKeywords',
-      'disabledCloudKeywords',
-      'cloudCategoryKeywords',
-      'cloudCategoryUsernames',
-    ),
+    getStorageDefaults('cloudKeywords', 'disabledCloudKeywords', 'cloudCategoryToggles'),
   );
-  cloudCategoryKeywords = items.cloudCategoryKeywords ?? true;
-  cloudCategoryUsernames = items.cloudCategoryUsernames ?? true;
-  updateCloudFilterDropdown();
+  cloudCategoryToggles = items.cloudCategoryToggles ?? {};
+  const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
+  updateCloudFilterDropdown(categorized);
 
   let disabledList = items.disabledCloudKeywords ?? [];
 
-  if (!cloudCategoryKeywords && !cloudCategoryUsernames) {
+  const activeCategories = Object.keys(categorized).filter(
+    (catName) => cloudCategoryToggles[catName] ?? true,
+  );
+
+  if (Object.keys(categorized).length > 0 && activeCategories.length === 0) {
     cloudKeywordList.replaceChildren(
       el('div', {
         className: 'empty-hint',
@@ -655,11 +657,10 @@ async function renderCloudKeywords() {
     return;
   }
 
-  const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
-  let cloudList = [
-    ...(cloudCategoryKeywords ? categorized.keywords : []),
-    ...(cloudCategoryUsernames ? categorized.usernames : []),
-  ];
+  let cloudList = [];
+  for (const catName of activeCategories) {
+    cloudList.push(...(categorized[catName] ?? []));
+  }
 
   if (currentCloudSearchQuery !== '') {
     cloudList = cloudList.filter((kw) => kw.toLowerCase().includes(currentCloudSearchQuery));
@@ -797,17 +798,17 @@ if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
 if (selectAllCloudBtn) {
   selectAllCloudBtn.addEventListener('click', async () => {
     const items = await chrome.storage.local.get(
-      getStorageDefaults('cloudKeywords', 'cloudCategoryKeywords', 'cloudCategoryUsernames'),
+      getStorageDefaults('cloudKeywords', 'cloudCategoryToggles'),
     );
-    const catKeywords = items.cloudCategoryKeywords ?? true;
-    const catUsernames = items.cloudCategoryUsernames ?? true;
-    if (!catKeywords && !catUsernames) return;
-
+    const toggles = items.cloudCategoryToggles ?? {};
     const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
-    let cloudList = [
-      ...(catKeywords ? categorized.keywords : []),
-      ...(catUsernames ? categorized.usernames : []),
-    ];
+    const activeCategories = Object.keys(categorized).filter((catName) => toggles[catName] ?? true);
+    if (Object.keys(categorized).length > 0 && activeCategories.length === 0) return;
+
+    let cloudList = [];
+    for (const catName of activeCategories) {
+      cloudList.push(...(categorized[catName] ?? []));
+    }
 
     const query = currentCloudSearchQuery;
     if (query) {
@@ -937,8 +938,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'blockGrok',
       'enabled',
       'cloudEnabled',
-      'cloudCategoryKeywords',
-      'cloudCategoryUsernames',
+      'cloudCategoryToggles',
       'blockedCount',
       'lastSyncTime',
       'cloudKeywords',
@@ -960,9 +960,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await chrome.storage.local.set({ autoBlockKeywords: autoBlockKeywords.values().toArray() });
   }
 
-  cloudCategoryKeywords = items.cloudCategoryKeywords ?? true;
-  cloudCategoryUsernames = items.cloudCategoryUsernames ?? true;
-  updateCloudFilterDropdown();
+  cloudCategoryToggles = items.cloudCategoryToggles ?? {};
+  if (items.cloudCategoryKeywords === false) {
+    cloudCategoryToggles['常规屏蔽词'] ??= false;
+  }
+  if (items.cloudCategoryUsernames === false) {
+    cloudCategoryToggles['用户名'] ??= false;
+  }
+  updateCloudFilterDropdown(parseCategorizedKeywords(items.cloudKeywords ?? ''));
 
   checkUsernameEl.checked = items.checkUsername;
   onlyCommentsEl.checked = items.onlyComments;

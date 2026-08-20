@@ -82,8 +82,7 @@
           'keywords',
           'cloudEnabled',
           'cloudKeywords',
-          'cloudCategoryKeywords',
-          'cloudCategoryUsernames',
+          'cloudCategoryToggles',
           'autoBlockKeywords',
           'disabledCloudKeywords',
         ),
@@ -94,12 +93,12 @@
       let cloudKws = [];
       if (items.cloudEnabled) {
         const categorized = parseCategorizedKeywords(items.cloudKeywords ?? '');
+        const toggles = items.cloudCategoryToggles ?? {};
         const candidateCloudKws = [];
-        if (items.cloudCategoryKeywords ?? true) {
-          candidateCloudKws.push(...categorized.keywords);
-        }
-        if (items.cloudCategoryUsernames ?? true) {
-          candidateCloudKws.push(...categorized.usernames);
+        for (const [catName, list] of Object.entries(categorized)) {
+          if (toggles[catName] ?? true) {
+            candidateCloudKws.push(...list);
+          }
         }
         cloudKws = new Set(candidateCloudKws)
           .difference(new Set(disabledCloudKws))
@@ -295,8 +294,7 @@
       changes.keywords ||
       changes.cloudEnabled ||
       changes.cloudKeywords ||
-      changes.cloudCategoryKeywords ||
-      changes.cloudCategoryUsernames ||
+      changes.cloudCategoryToggles ||
       changes.autoBlockKeywords ||
       changes.disabledCloudKeywords
     ) {

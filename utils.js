@@ -14,6 +14,14 @@ export function isKeywordRegex(k) {
   return typeof k === 'string' && k.length >= 3 && /^\/.+\/[a-zA-Z]*$/v.test(k);
 }
 
+const categoryHeaderRegex = /^#(?:\s*\[(?<bracketName>[^\]]+)\]|\s+(?<spaceName>\S+.*))$/v;
+
+export function isCategoryHeader(line) {
+  if (typeof line !== 'string') return false;
+  const cleaned = line.replaceAll(invisibleCharsRegex, '').trim();
+  return categoryHeaderRegex.test(cleaned);
+}
+
 export function extractCleanScreenName(input) {
   if (!input) return '';
   const simpleMatch = fastHandleRegex.exec(input);
@@ -30,8 +38,7 @@ const STORAGE_DEFAULTS = {
   keywords: '',
   cloudEnabled: true,
   cloudKeywords: '',
-  cloudCategoryKeywords: true,
-  cloudCategoryUsernames: true,
+  cloudCategoryToggles: {},
   checkUsername: true,
   onlyComments: true,
   blockSpecialChars: false,
@@ -71,7 +78,7 @@ export function parseKeywords(text) {
   const result = [];
   for (const line of text.split('\n')) {
     const k = line.replaceAll(invisibleCharsRegex, '').trim();
-    if (!k || k.startsWith('#')) continue;
+    if (!k || isCategoryHeader(k)) continue;
     if (isKeywordRegex(k)) {
       result.push(k);
     } else {
@@ -82,27 +89,33 @@ export function parseKeywords(text) {
 }
 
 export function parseCategorizedKeywords(text) {
-  const result = { keywords: [], usernames: [] };
+  const result = {};
   if (!text) return result;
-  let currentCategory = 'keywords';
+  let currentCategory = '常规屏蔽词';
+  result[currentCategory] = [];
+
   for (const line of text.split('\n')) {
     const cleaned = line.replaceAll(invisibleCharsRegex, '').trim();
     if (!cleaned) continue;
-    if (cleaned.startsWith('#')) {
-      if (cleaned.includes('用户名')) {
-        currentCategory = 'usernames';
-      } else if (cleaned.includes('常规') || cleaned.includes('默认')) {
-        currentCategory = 'keywords';
+
+    const headerMatch = categoryHeaderRegex.exec(cleaned);
+    if (headerMatch) {
+      const catName = (headerMatch.groups.bracketName || headerMatch.groups.spaceName || '').trim();
+      if (catName) {
+        currentCategory = catName;
+        result[currentCategory] ??= [];
       }
       continue;
     }
+
     const item = isKeywordRegex(cleaned) ? cleaned : cleaned.toLowerCase();
-    if (currentCategory === 'usernames') {
-      result.usernames.push(item);
-    } else {
-      result.keywords.push(item);
-    }
+    result[currentCategory].push(item);
   }
+
+  if (result['常规屏蔽词'] && result['常规屏蔽词'].length === 0 && Object.keys(result).length > 1) {
+    delete result['常规屏蔽词'];
+  }
+
   return result;
 }
 
