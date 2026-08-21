@@ -1505,7 +1505,7 @@ closeHistoryBtn.addEventListener('click', () => {
 
 function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
   const query = currentWhitelistSearchQuery.trim().toLowerCase();
-  const cleanQuery = query.replace(/^@/, '');
+  const cleanQuery = query.replace(/^@/v, '');
   const filteredWhitelist = whitelist.filter((handle) =>
     cleanQuery ? handle.toLowerCase().includes(cleanQuery) : true,
   );

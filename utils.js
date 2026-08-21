@@ -14,7 +14,7 @@ export function cleanInvisibleChars(str) {
   return hasInvisibleCharsRegex.test(str) ? str.replaceAll(invisibleCharsRegex, '') : str;
 }
 
-const fastHandleRegex = /^[@/]?(?<handle>[a-zA-Z0-9_]{1,15})$/u;
+const fastHandleRegex = /^[@\/]?(?<handle>[a-zA-Z0-9_]{1,15})$/v;
 
 export function isKeywordRegex(k) {
   return typeof k === 'string' && k.length >= 3 && /^\/.+\/[a-zA-Z]*$/v.test(k);

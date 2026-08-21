@@ -27,6 +27,8 @@
   const emojiRegex = /\p{RGI_Emoji}/v;
   const spamCharsRegex =
     /[\u02B0-\u02FF\u0F00-\u0FFF\u1D00-\u1D7F\u1D80-\u1DBF\u2070-\u209F\u2100-\u2BFF\uA980-\uA9DF\uAA00-\uAADF\u{13000}-\u{1342F}\u{1D400}-\u{1D7FF}]/v;
+  const displayNamePunctRegex = /[\s_.\-]+/v;
+  const displayNamePunctGlobalRegex = /[\s_.\-]+/gv;
 
   function isExtensionAlive() {
     return !!chrome.runtime?.id;
@@ -65,7 +67,7 @@
       for (const ch of kw) node = node[ch] ??= {};
     }
 
-    const escapeChar = (c) => (/[.*+?^${}()|[\]\\]/.test(c) ? `\\${c}` : c);
+    const escapeChar = (c) => (/[.*+?^$\{\}\(\)\|\[\]\\]/v.test(c) ? `\\${c}` : c);
     function stringify(node) {
       const keys = Object.keys(node);
       if (!keys.length) return '';
@@ -73,7 +75,7 @@
       return branches.length > 1 ? `(?:${branches.join('|')})` : branches[0];
     }
 
-    return new RegExp(stringify(root), 'iu');
+    return new RegExp(stringify(root), 'iv');
   }
 
   async function mergeKeywords() {
@@ -122,11 +124,11 @@
 
         for (const kw of keywords) {
           const match = kw.startsWith('/')
-            ? kw.match(/^\/(?<pattern>.+)\/(?<flags>[a-zA-Z]*)$/)
+            ? kw.match(/^\/(?<pattern>.+)\/(?<flags>[a-zA-Z]*)$/v)
             : null;
           if (match) {
             try {
-              const cleanFlags = match.groups.flags.replace(/[gy]/g, '');
+              const cleanFlags = match.groups.flags.replace(/[gy]/gv, '');
               customRegexes.push(new RegExp(match.groups.pattern, cleanFlags));
             } catch (e) {
               console.warn('[X-Blocker] Invalid regex ignored:', kw, e);
@@ -454,8 +456,8 @@
     }
 
     const cleanDisplayName =
-      displayName && /[\s_.\-]+/v.test(displayName)
-        ? displayName.replaceAll(/[\s_.\-]+/gv, '')
+      displayName && displayNamePunctRegex.test(displayName)
+        ? displayName.replaceAll(displayNamePunctGlobalRegex, '')
         : displayName;
 
     if (matchesAutoBlocklist(tweetBody)) {
