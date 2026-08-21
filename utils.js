@@ -7,6 +7,12 @@ const CLOUD_KEYWORDS_CDN =
 export const SYNC_INTERVAL_MINUTES = 360;
 export const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
 export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
+const hasInvisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/v;
+
+export function cleanInvisibleChars(str) {
+  if (!str) return '';
+  return hasInvisibleCharsRegex.test(str) ? str.replaceAll(invisibleCharsRegex, '') : str;
+}
 
 const fastHandleRegex = /^[@/]?(?<handle>[a-zA-Z0-9_]{1,15})$/u;
 
@@ -26,7 +32,7 @@ export function extractCleanScreenName(input) {
   if (simpleMatch) {
     return simpleMatch.groups.handle.toLowerCase();
   }
-  const cleaned = input.replaceAll(invisibleCharsRegex, '').trim();
+  const cleaned = cleanInvisibleChars(input).trim();
   const match = cleaned.match(/(?:^|\/|@)(?<handle>[a-zA-Z0-9_]{1,15})(?:\/|\?|$)/v);
   if (match) return match.groups.handle.toLowerCase();
   return '';
@@ -88,10 +94,7 @@ export function parseKeywords(text) {
   if (!text) return [];
   const result = [];
   for (const line of text.split('\n')) {
-    const cleaned = invisibleCharsRegex.test(line)
-      ? line.replaceAll(invisibleCharsRegex, '')
-      : line;
-    const k = cleaned.trim();
+    const k = cleanInvisibleChars(line).trim();
     if (!k || k === '#' || isCategoryHeader(k)) continue;
     if (isKeywordRegex(k)) {
       result.push(k);
@@ -109,9 +112,7 @@ export function parseCategorizedKeywords(text) {
   result[currentCategory] = [];
 
   for (const line of text.split('\n')) {
-    const cleaned = (
-      invisibleCharsRegex.test(line) ? line.replaceAll(invisibleCharsRegex, '') : line
-    ).trim();
+    const cleaned = cleanInvisibleChars(line).trim();
     if (!cleaned || cleaned === '#') continue;
 
     const headerMatch = categoryHeaderRegex.exec(cleaned);
@@ -208,9 +209,7 @@ export async function syncCloudKeywords() {
     }
     const normalizedLines = [];
     for (const line of text.split('\n')) {
-      const cleaned = (
-        invisibleCharsRegex.test(line) ? line.replaceAll(invisibleCharsRegex, '') : line
-      ).trim();
+      const cleaned = cleanInvisibleChars(line).trim();
       if (cleaned) {
         normalizedLines.push(cleaned);
       }

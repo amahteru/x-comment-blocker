@@ -6,7 +6,7 @@
     getResolvedCategoryToggles,
     parseKeywords,
     parseCategorizedKeywords,
-    invisibleCharsRegex,
+    cleanInvisibleChars,
     extractCleanScreenName,
   } = await import(browserApi.runtime.getURL('utils.js'));
   let blockRegexes = [];
@@ -414,9 +414,7 @@
     isMainTweet,
     grokElement = null,
   ) {
-    const tweetBody = invisibleCharsRegex.test(rawTweetText)
-      ? rawTweetText.replaceAll(invisibleCharsRegex, '')
-      : rawTweetText;
+    const tweetBody = cleanInvisibleChars(rawTweetText);
     let stableHandle = '';
     let displayName = '';
 
@@ -425,9 +423,7 @@
       const rawHref = handleLink.getAttribute('href') || '';
       stableHandle = extractCleanScreenName(rawHref);
       const rawDisplayName = getTweetTextForKeywords(handleLink).trim();
-      displayName = invisibleCharsRegex.test(rawDisplayName)
-        ? rawDisplayName.replaceAll(invisibleCharsRegex, '').trim()
-        : rawDisplayName;
+      displayName = cleanInvisibleChars(rawDisplayName).trim();
     }
 
     if (stableHandle && whitelistSet.has(stableHandle)) {
