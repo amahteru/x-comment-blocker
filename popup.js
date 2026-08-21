@@ -384,15 +384,9 @@ importFile.addEventListener('change', async (e) => {
 
     try {
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed)) {
-        importedKeywords = parseKeywords(parsed);
-      } else if (parsed && typeof parsed === 'object') {
-        if (parsed.keywords) {
-          importedKeywords = parseKeywords(parsed.keywords);
-        }
-        if (Array.isArray(parsed.autoBlockKeywords)) {
-          importedAutoBlocks = parsed.autoBlockKeywords.filter((k) => typeof k === 'string');
-        }
+      importedKeywords = parseKeywords(parsed?.keywords ?? parsed);
+      if (Array.isArray(parsed?.autoBlockKeywords)) {
+        importedAutoBlocks = parsed.autoBlockKeywords.filter((k) => typeof k === 'string');
       }
     } catch {
       importedKeywords = parseKeywords(content);
@@ -403,9 +397,7 @@ importFile.addEventListener('change', async (e) => {
       return;
     }
 
-    const currentSet = new Set(userKeywords);
-    const newKws = importedKeywords.filter((k) => !currentSet.has(k));
-    const uniqueNewKws = Array.from(new Set(newKws));
+    const uniqueNewKws = Array.from(new Set(importedKeywords).difference(new Set(userKeywords)));
 
     if (uniqueNewKws.length > 0) {
       userKeywords.push(...uniqueNewKws);
@@ -1350,6 +1342,7 @@ function renderHistoryPage() {
   }
 
   const cleanSearchQuery = currentSearchQuery.replace(/^[@\/]/v, '');
+  const targetHighlightQuery = cleanSearchQuery || currentSearchQuery;
   const newSpans = [];
   const fragment = document.createDocumentFragment();
   for (let i = start; i < end; i++) {
@@ -1364,13 +1357,13 @@ function renderHistoryPage() {
         textContent: displayName,
         title: displayName,
       });
-      highlightText(nameSpan, cleanSearchQuery || currentSearchQuery);
+      highlightText(nameSpan, targetHighlightQuery);
       userInfo.append(nameSpan);
       newSpans.push(nameSpan);
     }
     if (handle) {
       const handleSpan = el('span', { className: 'history-handle', textContent: `@${handle}` });
-      highlightText(handleSpan, cleanSearchQuery || currentSearchQuery);
+      highlightText(handleSpan, targetHighlightQuery);
       userInfo.append(handleSpan);
     }
 

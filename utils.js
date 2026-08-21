@@ -6,7 +6,7 @@ const CLOUD_KEYWORDS_CDN =
   'https://fastly.jsdelivr.net/gh/amahteru/x-comment-blocker@main/keywords.txt';
 export const SYNC_INTERVAL_MINUTES = 360;
 export const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
-export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
+const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
 const hasInvisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/v;
 
 export function cleanInvisibleChars(str) {
