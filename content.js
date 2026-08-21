@@ -52,7 +52,10 @@
       if (cleaned && cleaned.length <= MAX_KEYWORD_LENGTH) seen.add(cleaned);
     }
     if (!seen.size) return null;
-    const sorted = Array.from(seen).sort((a, b) => a.length - b.length);
+    const sorted = seen
+      .values()
+      .toArray()
+      .sort((a, b) => a.length - b.length);
 
     const pruned = [];
     for (const kw of sorted) {
@@ -678,7 +681,7 @@
         tweet.classList.remove('x-comment-blocker-hidden-reply');
         tweet.classList.add('x-comment-blocker-hidden');
 
-        let normalizedBody = (tweetBody || rawTweetText).replaceAll(/\s+/gv, ' ').trim();
+        let normalizedBody = tweetBody.replaceAll(/\s+/gv, ' ').trim();
 
         if (blockReason === 'Grok屏蔽' && grokElement) {
           const grokLink = grokElement.getAttribute('content') || grokElement.href || '';

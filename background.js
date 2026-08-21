@@ -19,7 +19,7 @@ class SyncLock {
   }
 }
 
-async function getAuthHeaders() {
+function getAuthHeaders() {
   return {
     authorization:
       'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
@@ -253,13 +253,7 @@ class AutoBlockManager {
 
     const validNames = new Set(Iterator.from(screenNames).map(extractCleanScreenName))
       .values()
-      .filter(
-        (name) =>
-          name &&
-          /^[a-zA-Z0-9_]{1,15}$/v.test(name) &&
-          !this.queue.includes(name) &&
-          !this.blockedUsersSet.has(name),
-      )
+      .filter((name) => name && !this.queue.includes(name) && !this.blockedUsersSet.has(name))
       .toArray();
 
     if (validNames.length > 0) {
@@ -592,7 +586,7 @@ async function handleBlockUser(screenName, isBlock) {
     }
 
     const endpoint = isBlock ? 'create.json' : 'destroy.json';
-    const headers = await getAuthHeaders();
+    const headers = getAuthHeaders();
 
     headers['x-csrf-token'] = cookie.value;
     headers['content-type'] = 'application/x-www-form-urlencoded';

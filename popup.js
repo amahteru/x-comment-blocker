@@ -141,8 +141,11 @@ function updateEnabledState() {
 
 function el(tag, props = {}, children) {
   const element = document.createElement(tag);
-  const { innerHTML, ...rest } = props;
+  const { innerHTML, dataset, ...rest } = props;
   Object.assign(element, rest);
+  if (dataset) {
+    Object.assign(element.dataset, dataset);
+  }
   if (innerHTML) {
     setSafeHtml(element, innerHTML);
   }
@@ -356,9 +359,10 @@ exportBtn.addEventListener('click', () => {
   const content = userKeywords.join('\n');
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `x-comment-blocker-keywords-${Temporal.Now.plainDateISO().toString()}.txt`;
+  const a = el('a', {
+    href: url,
+    download: `x-comment-blocker-keywords-${Temporal.Now.plainDateISO().toString()}.txt`,
+  });
   a.click();
   URL.revokeObjectURL(url);
   showStatus('导出成功');
@@ -416,9 +420,10 @@ exportAllBtn.addEventListener('click', async () => {
     const content = JSON.stringify(allItems, null, 2);
     const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `x-comment-blocker-backup-${Temporal.Now.plainDateISO().toString()}.json`;
+    const a = el('a', {
+      href: url,
+      download: `x-comment-blocker-backup-${Temporal.Now.plainDateISO().toString()}.json`,
+    });
     a.click();
     URL.revokeObjectURL(url);
     showStatus('全量导出成功');
@@ -1053,13 +1058,11 @@ if (blockAllHistoryBtn) {
   blockAllHistoryBtn.addEventListener('click', async (e) => {
     if (blockAllHistoryBtn.disabled) return;
 
-    const usersToBlock = Array.from(
-      new Set(
-        filteredHistory
-          .map((item) => extractCleanScreenName(item.user))
-          .filter((name) => /^[a-zA-Z0-9_]{1,15}$/v.test(name)),
-      ),
-    );
+    const usersToBlock = new Set(
+      filteredHistory.map((item) => extractCleanScreenName(item.user)).filter(Boolean),
+    )
+      .values()
+      .toArray();
 
     if (usersToBlock.length === 0) {
       showStatus('当前列表没有可拉黑的用户');
@@ -1242,18 +1245,19 @@ function updateFilterOptions() {
     currentFilterReason = 'all';
   }
 
-  const allOption = document.createElement('div');
-  allOption.className = `dropdown-option ${currentFilterReason === 'all' ? 'active' : ''}`;
-  allOption.dataset.reason = 'all';
-  allOption.textContent = '全部原因';
-
-  const optionNodes = reasons.map((reason) => {
-    const opt = document.createElement('div');
-    opt.className = `dropdown-option ${currentFilterReason === reason ? 'active' : ''}`;
-    opt.dataset.reason = reason;
-    opt.textContent = reason === '__blocked_on_x__' ? '已拉黑' : reason;
-    return opt;
+  const allOption = el('div', {
+    className: `dropdown-option ${currentFilterReason === 'all' ? 'active' : ''}`,
+    dataset: { reason: 'all' },
+    textContent: '全部原因',
   });
+
+  const optionNodes = reasons.map((reason) =>
+    el('div', {
+      className: `dropdown-option ${currentFilterReason === reason ? 'active' : ''}`,
+      dataset: { reason },
+      textContent: reason === '__blocked_on_x__' ? '已拉黑' : reason,
+    }),
+  );
 
   filterDropdown.replaceChildren(allOption, ...optionNodes);
 }
@@ -1273,9 +1277,10 @@ function highlightText(element, query) {
   matches.toReversed().forEach(({ node, index, length }) => {
     const after = node.splitText(index);
     after.splitText(length);
-    const mark = document.createElement('mark');
-    mark.className = 'search-highlight';
-    mark.textContent = after.textContent;
+    const mark = el('mark', {
+      className: 'search-highlight',
+      textContent: after.textContent,
+    });
     after.parentNode.replaceChild(mark, after);
   });
 }
@@ -1716,8 +1721,6 @@ async function refreshHistoryDisplay() {
   updateFilterOptions();
   if (oldReason !== currentFilterReason) {
     await chrome.storage.local.set({ historyFilterReason: currentFilterReason });
-    applyHistoryFilter();
-    return;
   }
 
   applyHistoryFilter();

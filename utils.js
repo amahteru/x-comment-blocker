@@ -8,7 +8,7 @@ export const SYNC_INTERVAL_MINUTES = 360;
 export const SYNC_INTERVAL_MS = SYNC_INTERVAL_MINUTES * 60 * 1000;
 export const invisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/gv;
 
-const fastHandleRegex = /^[@/]?([a-zA-Z0-9_]{1,15})$/;
+const fastHandleRegex = /^[@/]?(?<handle>[a-zA-Z0-9_]{1,15})$/u;
 
 export function isKeywordRegex(k) {
   return typeof k === 'string' && k.length >= 3 && /^\/.+\/[a-zA-Z]*$/v.test(k);
@@ -17,16 +17,14 @@ export function isKeywordRegex(k) {
 const categoryHeaderRegex = /^#(?:\s*\[(?<bracketName>[^\]]+)\]|\s+(?<spaceName>\S+.*))$/v;
 
 function isCategoryHeader(line) {
-  if (typeof line !== 'string') return false;
-  const cleaned = line.replaceAll(invisibleCharsRegex, '').trim();
-  return categoryHeaderRegex.test(cleaned);
+  return typeof line === 'string' && categoryHeaderRegex.test(line);
 }
 
 export function extractCleanScreenName(input) {
   if (!input) return '';
   const simpleMatch = fastHandleRegex.exec(input);
   if (simpleMatch) {
-    return simpleMatch[1].toLowerCase();
+    return simpleMatch.groups.handle.toLowerCase();
   }
   const cleaned = input.replaceAll(invisibleCharsRegex, '').trim();
   const match = cleaned.match(/(?:^|\/|@)(?<handle>[a-zA-Z0-9_]{1,15})(?:\/|\?|$)/v);
@@ -162,7 +160,7 @@ export async function syncCloudKeywords() {
     } catch (apiError) {
       console.warn('[X-Blocker] API update failed, falling back to CDN:', apiError);
       isCDN = true;
-      resp = await fetch(`${CLOUD_KEYWORDS_CDN}?t=${Date.now()}`, {
+      resp = await fetch(`${CLOUD_KEYWORDS_CDN}?t=${Temporal.Now.instant().epochMilliseconds}`, {
         cache: 'no-store',
         signal: AbortSignal.timeout(15000),
       });
@@ -174,7 +172,7 @@ export async function syncCloudKeywords() {
 
     if (!isCDN && resp.status === 304) {
       await browserApi.storage.local.set({
-        lastSyncTime: Date.now(),
+        lastSyncTime: Temporal.Now.instant().epochMilliseconds,
         syncStatus: 'ok',
         syncError: '',
       });
@@ -197,7 +195,7 @@ export async function syncCloudKeywords() {
         `[X-Blocker] CDN cache (${cloudList.length} items) is older than local (${currentCloudList.length} items). Update aborted.`,
       );
       await browserApi.storage.local.set({
-        lastSyncTime: Date.now(),
+        lastSyncTime: Temporal.Now.instant().epochMilliseconds,
         syncStatus: 'ok',
         syncError: '',
       });
@@ -228,7 +226,7 @@ export async function syncCloudKeywords() {
       disabledCloudKeywords: cleanedDisabled,
       autoBlockKeywords: cleanedAutoBlock,
       cloudETag: newETag,
-      lastSyncTime: Date.now(),
+      lastSyncTime: Temporal.Now.instant().epochMilliseconds,
       syncStatus: 'ok',
       syncError: '',
     });
