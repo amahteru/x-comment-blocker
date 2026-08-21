@@ -446,6 +446,39 @@ importAllBtn.addEventListener('click', () => {
   importAllFile.click();
 });
 
+const STRING_ARRAY_KEYS = new Set([
+  'whitelist',
+  'autoBlockKeywords',
+  'disabledCloudKeywords',
+  'autoBlockQueue',
+  'blockedUsersOnX',
+]);
+const BOOLEAN_KEYS = new Set([
+  'checkUsername',
+  'onlyComments',
+  'blockSpecialChars',
+  'blockEmoji',
+  'blockGrok',
+  'enabled',
+  'cloudEnabled',
+]);
+const STRING_KEYS = new Set([
+  'keywords',
+  'cloudKeywords',
+  'cloudETag',
+  'syncStatus',
+  'syncError',
+  'autoBlockLastDate',
+  'historyFilterReason',
+]);
+const NUMBER_KEYS = new Set([
+  'blockedCount',
+  'autoBlockToday',
+  'autoBlockPausedUntil',
+  'autoBlockBatchCount',
+  'lastSyncTime',
+]);
+
 function sanitizeImportedState(obj) {
   const out = {};
   for (const [key, value] of Object.entries(obj)) {
@@ -463,27 +496,9 @@ function sanitizeImportedState(obj) {
               isAutoBlock: item.isAutoBlock === true,
             }))
         : [];
-    } else if (
-      [
-        'whitelist',
-        'autoBlockKeywords',
-        'disabledCloudKeywords',
-        'autoBlockQueue',
-        'blockedUsersOnX',
-      ].includes(key)
-    ) {
+    } else if (STRING_ARRAY_KEYS.has(key)) {
       out[key] = Array.isArray(value) ? value.filter((v) => typeof v === 'string') : [];
-    } else if (
-      [
-        'checkUsername',
-        'onlyComments',
-        'blockSpecialChars',
-        'blockEmoji',
-        'blockGrok',
-        'enabled',
-        'cloudEnabled',
-      ].includes(key)
-    ) {
+    } else if (BOOLEAN_KEYS.has(key)) {
       out[key] = value === true;
     } else if (key === 'cloudCategoryToggles') {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -495,27 +510,9 @@ function sanitizeImportedState(obj) {
       } else {
         out[key] = {};
       }
-    } else if (
-      [
-        'keywords',
-        'cloudKeywords',
-        'cloudETag',
-        'syncStatus',
-        'syncError',
-        'autoBlockLastDate',
-        'historyFilterReason',
-      ].includes(key)
-    ) {
+    } else if (STRING_KEYS.has(key)) {
       out[key] = typeof value === 'string' ? value : String(value ?? '');
-    } else if (
-      [
-        'blockedCount',
-        'autoBlockToday',
-        'autoBlockPausedUntil',
-        'autoBlockBatchCount',
-        'lastSyncTime',
-      ].includes(key)
-    ) {
+    } else if (NUMBER_KEYS.has(key)) {
       out[key] = Number(value) || 0;
     } else {
       out[key] = value;
@@ -1437,8 +1434,9 @@ function renderHistoryPage() {
         .catch(() => {});
       div.remove();
 
-      currentHistory = currentHistory.filter((h) => !(h.id === item.id && h.time === item.time));
-      filteredHistory = filteredHistory.filter((h) => !(h.id === item.id && h.time === item.time));
+      const isMatch = (h) => !(h.id === item.id && (!item.time || h.time === item.time));
+      currentHistory = currentHistory.filter(isMatch);
+      filteredHistory = filteredHistory.filter(isMatch);
 
       const oldReason = currentFilterReason;
       updateFilterOptions();

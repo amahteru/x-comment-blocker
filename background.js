@@ -11,30 +11,11 @@ import {
 const ALARM_NAME = 'cloudKeywordSync';
 let isSyncing = false;
 
-class SyncLock {
-  constructor() {
-    isSyncing = true;
-  }
-  [Symbol.dispose]() {
-    isSyncing = false;
-  }
-}
-
 function getAuthHeaders() {
   return {
     authorization:
       'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA',
   };
-}
-
-class ProcessingLock {
-  constructor(obj) {
-    this.obj = obj;
-    this.obj.isProcessing = true;
-  }
-  [Symbol.dispose]() {
-    this.obj.isProcessing = false;
-  }
 }
 
 class AsyncQueue {
@@ -48,7 +29,7 @@ class AsyncQueue {
   }
   async process() {
     if (this.isProcessing) return;
-    const _lock = new ProcessingLock(this);
+    this.isProcessing = true;
 
     try {
       while (this.queue.length > 0) {
@@ -60,7 +41,7 @@ class AsyncQueue {
         }
       }
     } finally {
-      _lock[Symbol.dispose]();
+      this.isProcessing = false;
     }
   }
 }
@@ -140,13 +121,13 @@ chrome.storage.onChanged.addListener((changes, area) => {
 
 async function doSync() {
   if (isSyncing) return { success: false, reason: 'busy' };
-  const _lock = new SyncLock();
+  isSyncing = true;
 
   try {
     const success = await syncCloudKeywords();
     return { success };
   } finally {
-    _lock[Symbol.dispose]();
+    isSyncing = false;
   }
 }
 
@@ -267,7 +248,7 @@ class AutoBlockManager {
 
   async process() {
     if (this.isProcessing) return;
-    const _lock = new ProcessingLock(this);
+    this.isProcessing = true;
 
     try {
       try {
@@ -402,7 +383,7 @@ class AutoBlockManager {
         console.error('[X-Blocker] AutoBlockManager process error:', e);
       }
     } finally {
-      _lock[Symbol.dispose]();
+      this.isProcessing = false;
     }
   }
 }

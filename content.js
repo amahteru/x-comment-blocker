@@ -424,8 +424,7 @@
     if (handleLink) {
       const rawHref = handleLink.getAttribute('href') || '';
       stableHandle = extractCleanScreenName(rawHref);
-      const rawDisplayName = getTweetTextForKeywords(handleLink).trim();
-      displayName = cleanInvisibleChars(rawDisplayName).trim();
+      displayName = cleanInvisibleChars(getTweetTextForKeywords(handleLink)).trim();
     }
 
     if (stableHandle && whitelistSet.has(stableHandle)) {

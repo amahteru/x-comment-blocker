@@ -88,7 +88,8 @@ export function getStorageDefaults(...keys) {
   const result = {};
   for (const key of keys) {
     if (Object.hasOwn(STORAGE_DEFAULTS, key)) {
-      result[key] = Array.isArray(STORAGE_DEFAULTS[key]) ? [] : STORAGE_DEFAULTS[key];
+      const v = STORAGE_DEFAULTS[key];
+      result[key] = typeof v === 'object' && v ? (Array.isArray(v) ? [] : { ...v }) : v;
     }
   }
   return result;
