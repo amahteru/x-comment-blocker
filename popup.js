@@ -385,9 +385,7 @@ importFile.addEventListener('change', async (e) => {
     try {
       const parsed = JSON.parse(content);
       importedKeywords = parseKeywords(parsed?.keywords ?? parsed);
-      if (Array.isArray(parsed?.autoBlockKeywords)) {
-        importedAutoBlocks = parsed.autoBlockKeywords.filter((k) => typeof k === 'string');
-      }
+      importedAutoBlocks = parseKeywords(parsed?.autoBlockKeywords);
     } catch {
       importedKeywords = parseKeywords(content);
     }
