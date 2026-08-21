@@ -670,7 +670,7 @@
         tweet.classList.remove('x-comment-blocker-hidden-reply');
         tweet.classList.add('x-comment-blocker-hidden');
 
-        let normalizedBody = tweetBody.replaceAll(/\s+/gv, ' ').trim();
+        let normalizedBody = tweetBody.replace(/\s+/gv, ' ').trim();
 
         if (blockReason === 'Grok屏蔽' && grokElement) {
           const grokLink = grokElement.getAttribute('content') || grokElement.href || '';
@@ -695,7 +695,7 @@
             user: stableHandle || userName,
             displayName: displayName || '',
             reason: blockReason,
-            time: Temporal.Now.instant().epochMilliseconds,
+            time: Date.now(),
             isAutoBlock: isAutoBlock,
           });
         }

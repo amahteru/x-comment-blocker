@@ -1,6 +1,7 @@
 import {
   browserApi as chrome,
   extractCleanScreenName,
+  getLocalDateString,
   getStorageDefaults,
   parseKeywords,
   SYNC_INTERVAL_MINUTES,
@@ -199,7 +200,7 @@ class AutoBlockManager {
   initPromise = null;
 
   async checkDailyReset() {
-    const today = Temporal.Now.plainDateISO().toString();
+    const today = getLocalDateString();
     if (this.lastDate !== today) {
       this.lastDate = today;
       this.countToday = 0;
@@ -276,12 +277,10 @@ class AutoBlockManager {
           await this.refreshFromStorage();
           await this.checkDailyReset();
 
-          const now = Temporal.Now.instant();
-          if (this.pausedUntil > now.epochMilliseconds) {
-            const pausedUntilInstant = Temporal.Instant.fromEpochMilliseconds(this.pausedUntil);
-            console.warn(
-              `[X-Blocker] Auto block paused for ${Math.ceil(now.until(pausedUntilInstant).total('seconds'))}s.`,
-            );
+          const now = Date.now();
+          if (this.pausedUntil > now) {
+            const remainingSec = Math.ceil((this.pausedUntil - now) / 1000);
+            console.warn(`[X-Blocker] Auto block paused for ${remainingSec}s.`);
             break;
           }
 
@@ -292,7 +291,7 @@ class AutoBlockManager {
 
           if (this.batchCount >= this.batchLimit) {
             console.warn('[X-Blocker] Auto block batch limit reached. Pausing for 15 mins.');
-            this.pausedUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
+            this.pausedUntil = Date.now() + 15 * 60 * 1000;
             this.batchCount = 0;
             await this.saveState({
               autoBlockPausedUntil: this.pausedUntil,
@@ -314,7 +313,7 @@ class AutoBlockManager {
               outcome = 'success';
             } else if (res?.status === 429) {
               outcome = 'rate-limited';
-              pauseUntil = Temporal.Now.instant().epochMilliseconds + 15 * 60 * 1000;
+              pauseUntil = Date.now() + 15 * 60 * 1000;
             } else if (res?.permanent || (res?.status && res.status >= 400 && res.status < 500)) {
               outcome = 'failed';
               failReason = res?.reason ?? 'unknown';
@@ -519,7 +518,7 @@ async function flushSpamBatch() {
 
   return storageQueue.enqueue(async () => {
     await ensureHistoryInitialized();
-    inMemoryHistory.unshift(...batch.reverse());
+    inMemoryHistory.unshift(...batch.toReversed());
     if (inMemoryHistory.length > 5000) {
       const evicted = inMemoryHistory.slice(5000);
       inMemoryHistory.length = 5000;
@@ -548,7 +547,7 @@ async function handleRecordSpam(items) {
       user: item.user || '',
       displayName: item.displayName || '',
       reason: item.reason || '',
-      time: item.time || Temporal.Now.instant().epochMilliseconds,
+      time: item.time || Date.now(),
       isAutoBlock: item.isAutoBlock === true,
     });
   }

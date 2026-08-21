@@ -11,7 +11,7 @@ const hasInvisibleCharsRegex = /\p{Default_Ignorable_Code_Point}/v;
 
 export function cleanInvisibleChars(str) {
   if (!str) return '';
-  return hasInvisibleCharsRegex.test(str) ? str.replaceAll(invisibleCharsRegex, '') : str;
+  return hasInvisibleCharsRegex.test(str) ? str.replace(invisibleCharsRegex, '') : str;
 }
 
 const fastHandleRegex = /^[@\/]?(?<handle>[a-zA-Z0-9_]{1,15})$/v;
@@ -36,6 +36,10 @@ export function extractCleanScreenName(input) {
   const match = cleaned.match(/(?:^|\/|@)(?<handle>[a-zA-Z0-9_]{1,15})(?:\/|\?|$)/v);
   if (match) return match.groups.handle.toLowerCase();
   return '';
+}
+
+export function getLocalDateString(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 const STORAGE_DEFAULTS = {
@@ -166,7 +170,7 @@ export async function syncCloudKeywords() {
     } catch (apiError) {
       console.warn('[X-Blocker] API update failed, falling back to CDN:', apiError);
       isCDN = true;
-      resp = await fetch(`${CLOUD_KEYWORDS_CDN}?t=${Temporal.Now.instant().epochMilliseconds}`, {
+      resp = await fetch(`${CLOUD_KEYWORDS_CDN}?t=${Date.now()}`, {
         cache: 'no-store',
         signal: AbortSignal.timeout(15000),
       });
@@ -178,7 +182,7 @@ export async function syncCloudKeywords() {
 
     if (!isCDN && resp.status === 304) {
       await browserApi.storage.local.set({
-        lastSyncTime: Temporal.Now.instant().epochMilliseconds,
+        lastSyncTime: Date.now(),
         syncStatus: 'ok',
         syncError: '',
       });
@@ -201,7 +205,7 @@ export async function syncCloudKeywords() {
         `[X-Blocker] CDN cache (${cloudList.length} items) is older than local (${currentCloudList.length} items). Update aborted.`,
       );
       await browserApi.storage.local.set({
-        lastSyncTime: Temporal.Now.instant().epochMilliseconds,
+        lastSyncTime: Date.now(),
         syncStatus: 'ok',
         syncError: '',
       });
@@ -232,7 +236,7 @@ export async function syncCloudKeywords() {
       disabledCloudKeywords: cleanedDisabled,
       autoBlockKeywords: cleanedAutoBlock,
       cloudETag: newETag,
-      lastSyncTime: Temporal.Now.instant().epochMilliseconds,
+      lastSyncTime: Date.now(),
       syncStatus: 'ok',
       syncError: '',
     });

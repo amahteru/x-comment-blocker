@@ -1,6 +1,7 @@
 import {
   browserApi as chrome,
   extractCleanScreenName,
+  getLocalDateString,
   getResolvedCategoryToggles,
   getStorageDefaults,
   isKeywordRegex,
@@ -361,7 +362,7 @@ exportBtn.addEventListener('click', () => {
   const url = URL.createObjectURL(blob);
   const a = el('a', {
     href: url,
-    download: `x-comment-blocker-keywords-${Temporal.Now.plainDateISO().toString()}.txt`,
+    download: `x-comment-blocker-keywords-${getLocalDateString()}.txt`,
   });
   a.click();
   URL.revokeObjectURL(url);
@@ -378,32 +379,41 @@ importFile.addEventListener('change', async (e) => {
 
   try {
     const content = await file.text();
-    let newKeywords = [];
+    const isJSON = file.name.endsWith('.json') || content.trim().startsWith('{');
+    let importedKeywords = [];
+    let importedAutoBlocks = [];
 
-    try {
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed)) {
-        newKeywords = parseKeywords(parsed.map(String).join('\n'));
-      }
-    } catch {
-      newKeywords = parseKeywords(content);
-    }
-
-    if (newKeywords.length > 0) {
-      const newKws = new Set(newKeywords).difference(new Set(userKeywords));
-      if (newKws.size > 0) {
-        userKeywords.push(...newKws);
-        renderUserKeywords();
-        autoSave();
-        showStatus(`成功导入 ${newKws.size} 个新词`);
-      } else {
-        showStatus('未发现新词，词库已包含这些内容');
-      }
+    if (isJSON) {
+      const data = JSON.parse(content);
+      importedKeywords = parseKeywords(data.keywords || '');
+      importedAutoBlocks = Array.isArray(data.autoBlockKeywords) ? data.autoBlockKeywords : [];
     } else {
-      showStatus('文件内容无效');
+      importedKeywords = parseKeywords(content);
     }
-  } catch {
-    showStatus('文件读取失败');
+
+    if (importedKeywords.length === 0) {
+      showStatus('未发现有效屏蔽词');
+      return;
+    }
+
+    const currentKws = userKeywords;
+    const mergedKws = Array.from(new Set([...currentKws, ...importedKeywords]));
+    userKeywords = mergedKws;
+
+    if (importedAutoBlocks.length > 0) {
+      for (const kw of importedAutoBlocks) {
+        if (userKeywords.includes(kw)) {
+          autoBlockKeywords.add(kw);
+        }
+      }
+    }
+
+    renderUserKeywords();
+    await autoSave();
+    showStatus(`成功导入 ${importedKeywords.length} 个屏蔽词`);
+  } catch (err) {
+    console.error('Import error:', err);
+    showStatus('导入失败，文件格式有误');
   } finally {
     importFile.value = '';
   }
@@ -417,7 +427,7 @@ exportAllBtn.addEventListener('click', async () => {
     const url = URL.createObjectURL(blob);
     const a = el('a', {
       href: url,
-      download: `x-comment-blocker-backup-${Temporal.Now.plainDateISO().toString()}.json`,
+      download: `x-comment-blocker-backup-${getLocalDateString()}.json`,
     });
     a.click();
     URL.revokeObjectURL(url);
@@ -552,21 +562,22 @@ importAllFile.addEventListener('change', async (e) => {
 
 function formatHistoryTime(timestamp) {
   if (!Number.isFinite(timestamp)) return '';
-  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const date = Temporal.Instant.fromEpochMilliseconds(timestamp).toZonedDateTimeISO(localTz);
-  const now = Temporal.Now.zonedDateTimeISO(localTz);
+  const date = new Date(timestamp);
+  const now = new Date();
 
-  if (date.toPlainDate().equals(now.toPlainDate())) {
-    return new Intl.DateTimeFormat('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: localTz,
-    }).format(timestamp);
-  } else if (date.year === now.year) {
-    return `${date.month}月${date.day}日`;
+  const isSameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isSameDay) {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  } else if (date.getFullYear() === now.getFullYear()) {
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
   } else {
-    return `${date.year}年${date.month}月${date.day}日`;
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
   }
 }
 
@@ -574,8 +585,7 @@ const rtf = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'always' });
 
 function relativeTime(ts) {
   if (!ts) return '';
-  const tsInstant = Temporal.Instant.fromEpochMilliseconds(ts);
-  const diffSec = Temporal.Now.instant().until(tsInstant).total('seconds');
+  const diffSec = Math.round((ts - Date.now()) / 1000);
   if (diffSec > -60) return '刚刚同步';
   if (diffSec > -3600) return `${rtf.format(Math.ceil(diffSec / 60), 'minute')}同步`;
   if (diffSec > -86400) return `${rtf.format(Math.ceil(diffSec / 3600), 'hour')}同步`;
@@ -907,10 +917,8 @@ async function triggerCloudSync(manual = false) {
   updateCloudInfo();
 
   if (syncBtn.classList.contains('syncing')) {
-    const startTime = Temporal.Instant.fromEpochMilliseconds(
-      parseInt(syncBtn.dataset.syncStartTime || Temporal.Now.instant().epochMilliseconds, 10),
-    );
-    const elapsed = Temporal.Now.instant().since(startTime).total('milliseconds');
+    const startTime = parseInt(syncBtn.dataset.syncStartTime || Date.now(), 10);
+    const elapsed = Date.now() - startTime;
     const animationDuration = 1000;
     const mod = elapsed % animationDuration;
     const remaining = mod === 0 ? 0 : animationDuration - mod;
@@ -934,7 +942,7 @@ blockGrokEl.addEventListener('change', () => autoSave());
 cloudToggleEl.addEventListener('change', () => autoSave());
 
 syncBtn.addEventListener('click', () => {
-  syncBtn.dataset.syncStartTime = Temporal.Now.instant().epochMilliseconds;
+  syncBtn.dataset.syncStartTime = Date.now();
   syncBtn.classList.add('syncing');
   triggerCloudSync(true);
 });
@@ -1004,9 +1012,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (
     !items.lastSyncTime ||
-    Temporal.Now.instant().epochMilliseconds - items.lastSyncTime > SYNC_INTERVAL_MS
+    Date.now() - items.lastSyncTime > SYNC_INTERVAL_MS
   ) {
-    syncBtn.dataset.syncStartTime = Temporal.Now.instant().epochMilliseconds;
+    syncBtn.dataset.syncStartTime = Date.now();
     syncBtn.classList.add('syncing');
     triggerCloudSync();
   }
@@ -1290,22 +1298,14 @@ function applyHistoryFilter() {
   }
 
   if (currentSearchQuery !== '') {
+    const cleanSearchQuery = currentSearchQuery.replace(/^[@\/]/v, '');
     filtered = filtered.filter((item) => {
       const text = item.text?.toLowerCase() ?? '';
-
-      let user = item.user?.toLowerCase() ?? '';
-      if (user) {
-        if (user.startsWith('/')) {
-          user = `@${user.substring(1)}`;
-        } else if (!user.startsWith('@')) {
-          user = `@${user}`;
-        }
-      }
-
+      const handle = extractCleanScreenName(item.user);
       const displayName = item.displayName?.toLowerCase() ?? '';
       return (
         text.includes(currentSearchQuery) ||
-        user.includes(currentSearchQuery) ||
+        (cleanSearchQuery && handle?.includes(cleanSearchQuery)) ||
         displayName.includes(currentSearchQuery)
       );
     });
@@ -1505,7 +1505,7 @@ closeHistoryBtn.addEventListener('click', () => {
 
 function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
   const query = currentWhitelistSearchQuery.trim().toLowerCase();
-  const cleanQuery = query.replace(/^@/v, '');
+  const cleanQuery = query.replace(/^[@\/]/v, '');
   const filteredWhitelist = whitelist.filter((handle) =>
     cleanQuery ? handle.toLowerCase().includes(cleanQuery) : true,
   );
