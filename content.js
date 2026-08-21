@@ -342,11 +342,14 @@
   function hasEmoji(text, node) {
     if (text && emojiRegex.test(text)) return true;
     if (!node) return false;
-    return Iterator.from(node.querySelectorAll('img')).some((img) => {
-      const src = img.src ?? '';
+    const imgs = node.getElementsByTagName('img');
+    for (let i = 0; i < imgs.length; i++) {
+      const img = imgs[i];
+      const src = img.src || '';
       if (src.includes('emoji') || src.includes('twemoji')) return true;
-      return emojiRegex.test(img.alt ?? '');
-    });
+      if (img.alt && emojiRegex.test(img.alt)) return true;
+    }
+    return false;
   }
 
   function getTweetStatusInfo(tweet, pageStatusId) {

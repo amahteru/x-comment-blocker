@@ -327,12 +327,12 @@ function addKeyword() {
   const inputKws = parseKeywords(newKeywordInput.value);
   if (inputKws.length === 0) return;
 
-  const newKws = Array.from(new Set(inputKws).difference(new Set(userKeywords)));
+  const newKws = new Set(inputKws).difference(new Set(userKeywords));
 
   newKeywordInput.value = '';
   newKeywordInput.focus();
 
-  if (newKws.length === 0) {
+  if (newKws.size === 0) {
     showStatus(isKeywordRegex(inputKws.at(0)) ? '该正则已存在' : '该屏蔽词已存在');
     return;
   }
@@ -1260,10 +1260,10 @@ function highlightText(element, query) {
   if (!query) return;
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   const matches = [];
+  const regex = new RegExp(RegExp.escape(query), 'giv');
   while (walker.nextNode()) {
     const node = walker.currentNode;
     const text = node.textContent;
-    const regex = new RegExp(RegExp.escape(query), 'giv');
     for (const match of text.matchAll(regex)) {
       matches.push({ node, index: match.index, length: query.length });
     }
@@ -1679,13 +1679,13 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (changes.blockedUsersOnX) {
     currentBlockedUsersOnXSet = new Set(changes.blockedUsersOnX.newValue ?? []);
-    const screenNames = new Set(
-      Iterator.from(document.querySelectorAll('button.btn-block-x')).map(
-        (btn) => btn.dataset.screenName,
-      ),
-    );
-    screenNames.forEach((name) => {
-      updateBlockBtns(name);
+    document.querySelectorAll('button.btn-block-x').forEach((btn) => {
+      const screenName = btn.dataset.screenName;
+      if (!screenName) return;
+      const isBlocked = currentBlockedUsersOnXSet.has(screenName);
+      btn.textContent = isBlocked ? '已拉黑' : '拉黑';
+      btn.classList.toggle('success', isBlocked);
+      btn.title = isBlocked ? '点击解除拉黑' : '在 X 上拉黑该账号';
     });
   }
   if (changes.blockedHistory && historyModal.classList.contains('open')) {

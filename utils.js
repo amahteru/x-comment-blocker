@@ -88,7 +88,10 @@ export function parseKeywords(text) {
   if (!text) return [];
   const result = [];
   for (const line of text.split('\n')) {
-    const k = line.replaceAll(invisibleCharsRegex, '').trim();
+    const cleaned = invisibleCharsRegex.test(line)
+      ? line.replaceAll(invisibleCharsRegex, '')
+      : line;
+    const k = cleaned.trim();
     if (!k || k === '#' || isCategoryHeader(k)) continue;
     if (isKeywordRegex(k)) {
       result.push(k);
@@ -106,7 +109,9 @@ export function parseCategorizedKeywords(text) {
   result[currentCategory] = [];
 
   for (const line of text.split('\n')) {
-    const cleaned = line.replaceAll(invisibleCharsRegex, '').trim();
+    const cleaned = (
+      invisibleCharsRegex.test(line) ? line.replaceAll(invisibleCharsRegex, '') : line
+    ).trim();
     if (!cleaned || cleaned === '#') continue;
 
     const headerMatch = categoryHeaderRegex.exec(cleaned);
@@ -203,7 +208,9 @@ export async function syncCloudKeywords() {
     }
     const normalizedLines = [];
     for (const line of text.split('\n')) {
-      const cleaned = line.replaceAll(invisibleCharsRegex, '').trim();
+      const cleaned = (
+        invisibleCharsRegex.test(line) ? line.replaceAll(invisibleCharsRegex, '') : line
+      ).trim();
       if (cleaned) {
         normalizedLines.push(cleaned);
       }
