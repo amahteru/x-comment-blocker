@@ -107,7 +107,7 @@ async function autoSave() {
 
   await chrome.storage.local.set({
     keywords: userKeywords.join('\n'),
-    autoBlockKeywords: autoBlockKeywords.values().toArray(),
+    autoBlockKeywords: Array.from(autoBlockKeywords),
     checkUsername: checkUsernameEl.checked,
     onlyComments: onlyCommentsEl.checked,
     blockSpecialChars: blockSpecialCharsEl.checked,
@@ -327,7 +327,7 @@ function addKeyword() {
   const inputKws = parseKeywords(newKeywordInput.value);
   if (inputKws.length === 0) return;
 
-  const newKws = new Set(inputKws).difference(new Set(userKeywords)).values().toArray();
+  const newKws = Array.from(new Set(inputKws).difference(new Set(userKeywords)));
 
   newKeywordInput.value = '';
   newKeywordInput.focus();
@@ -383,12 +383,7 @@ importFile.addEventListener('change', async (e) => {
     try {
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed)) {
-        newKeywords = parseKeywords(
-          Iterator.from(parsed)
-            .map((k) => String(k))
-            .toArray()
-            .join('\n'),
-        );
+        newKeywords = parseKeywords(parsed.map(String).join('\n'));
       }
     } catch {
       newKeywords = parseKeywords(content);
@@ -988,7 +983,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   ]);
   autoBlockKeywords = new Set(rawAutoBlockKeywords).intersection(allValidKeywordsSet);
   if (rawAutoBlockKeywords.length !== autoBlockKeywords.size) {
-    await chrome.storage.local.set({ autoBlockKeywords: autoBlockKeywords.values().toArray() });
+    await chrome.storage.local.set({ autoBlockKeywords: Array.from(autoBlockKeywords) });
   }
 
   cloudCategoryToggles = getResolvedCategoryToggles(items);
@@ -1058,11 +1053,13 @@ if (blockAllHistoryBtn) {
   blockAllHistoryBtn.addEventListener('click', async (e) => {
     if (blockAllHistoryBtn.disabled) return;
 
-    const usersToBlock = new Set(
-      filteredHistory.map((item) => extractCleanScreenName(item.user)).filter(Boolean),
-    )
-      .values()
-      .toArray();
+    const usersToBlock = Array.from(
+      new Set(
+        filteredHistory
+          .map((item) => extractCleanScreenName(item.user))
+          .filter(Boolean),
+      ),
+    );
 
     if (usersToBlock.length === 0) {
       showStatus('当前列表没有可拉黑的用户');
@@ -1232,14 +1229,11 @@ function updateFilterOptions() {
     }
   }
 
-  const reasons = reasonsSet
-    .values()
-    .toArray()
-    .toSorted((a, b) => {
-      if (a === '__blocked_on_x__') return -1;
-      if (b === '__blocked_on_x__') return 1;
-      return a.localeCompare(b);
-    });
+  const reasons = Array.from(reasonsSet).sort((a, b) => {
+    if (a === '__blocked_on_x__') return -1;
+    if (b === '__blocked_on_x__') return 1;
+    return a.localeCompare(b);
+  });
 
   if (currentFilterReason !== 'all' && !reasons.includes(currentFilterReason)) {
     currentFilterReason = 'all';

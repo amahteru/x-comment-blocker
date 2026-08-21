@@ -251,10 +251,9 @@ class AutoBlockManager {
     await this.init();
     if (!screenNames || screenNames.length === 0) return 0;
 
-    const validNames = new Set(Iterator.from(screenNames).map(extractCleanScreenName))
-      .values()
-      .filter((name) => name && !this.queue.includes(name) && !this.blockedUsersSet.has(name))
-      .toArray();
+    const validNames = Array.from(
+      new Set(screenNames.map(extractCleanScreenName)),
+    ).filter((name) => name && !this.queue.includes(name) && !this.blockedUsersSet.has(name));
 
     if (validNames.length > 0) {
       this.queue.push(...validNames);
@@ -355,7 +354,7 @@ class AutoBlockManager {
               autoBlockQueue: this.queue,
               autoBlockToday: this.countToday,
               autoBlockBatchCount: this.batchCount,
-              blockedUsersOnX: this.blockedUsersSet.values().toArray(),
+              blockedUsersOnX: Array.from(this.blockedUsersSet),
             });
           } else if (outcome === 'rate-limited') {
             console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');

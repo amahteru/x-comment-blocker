@@ -52,10 +52,7 @@
       if (cleaned && cleaned.length <= MAX_KEYWORD_LENGTH) seen.add(cleaned);
     }
     if (!seen.size) return null;
-    const sorted = seen
-      .values()
-      .toArray()
-      .sort((a, b) => a.length - b.length);
+    const sorted = Array.from(seen).sort((a, b) => a.length - b.length);
 
     const pruned = [];
     for (const kw of sorted) {
@@ -106,19 +103,17 @@
             candidateCloudKws.push(...list);
           }
         }
-        cloudKws = new Set(candidateCloudKws)
-          .difference(new Set(disabledCloudKws))
-          .values()
-          .toArray();
+        cloudKws = Array.from(
+          new Set(candidateCloudKws).difference(new Set(disabledCloudKws)),
+        );
       }
 
       const blockKeywordsSet = new Set([...cloudKws, ...userKws]);
-      const blockKeywords = blockKeywordsSet.values().toArray();
+      const blockKeywords = Array.from(blockKeywordsSet);
       const rawAutoBlockKws = items.autoBlockKeywords ?? [];
-      const autoBlockKws = new Set(rawAutoBlockKws)
-        .intersection(blockKeywordsSet)
-        .values()
-        .toArray();
+      const autoBlockKws = Array.from(
+        new Set(rawAutoBlockKws).intersection(blockKeywordsSet),
+      );
 
       const newKey = `${blockKeywords.join('\n')}|AUTO:|${autoBlockKws.join('\n')}`;
       if (newKey === lastKeywordsKey) return;
@@ -231,7 +226,7 @@
           queueMicrotask(() => {
             observerFlushScheduled = false;
             if (pendingTweets.size > 0) {
-              filterTweets(pendingTweets.values().toArray());
+              filterTweets(Array.from(pendingTweets));
               pendingTweets.clear();
             }
           });
