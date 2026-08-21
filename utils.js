@@ -96,6 +96,10 @@ export function getStorageDefaults(...keys) {
 
 export function parseKeywords(text) {
   if (!text) return [];
+  if (Array.isArray(text)) {
+    return text.flatMap((item) => parseKeywords(item));
+  }
+  if (typeof text !== 'string') return [];
   const result = [];
   for (const line of text.split('\n')) {
     const k = cleanInvisibleChars(line).trim();

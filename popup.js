@@ -379,15 +379,22 @@ importFile.addEventListener('change', async (e) => {
 
   try {
     const content = await file.text();
-    const isJSON = file.name.endsWith('.json') || content.trim().startsWith('{');
     let importedKeywords = [];
     let importedAutoBlocks = [];
 
-    if (isJSON) {
-      const data = JSON.parse(content);
-      importedKeywords = parseKeywords(data.keywords || '');
-      importedAutoBlocks = Array.isArray(data.autoBlockKeywords) ? data.autoBlockKeywords : [];
-    } else {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        importedKeywords = parseKeywords(parsed);
+      } else if (parsed && typeof parsed === 'object') {
+        if (parsed.keywords) {
+          importedKeywords = parseKeywords(parsed.keywords);
+        }
+        if (Array.isArray(parsed.autoBlockKeywords)) {
+          importedAutoBlocks = parsed.autoBlockKeywords.filter((k) => typeof k === 'string');
+        }
+      }
+    } catch {
       importedKeywords = parseKeywords(content);
     }
 
@@ -396,9 +403,13 @@ importFile.addEventListener('change', async (e) => {
       return;
     }
 
-    const currentKws = userKeywords;
-    const mergedKws = Array.from(new Set([...currentKws, ...importedKeywords]));
-    userKeywords = mergedKws;
+    const currentSet = new Set(userKeywords);
+    const newKws = importedKeywords.filter((k) => !currentSet.has(k));
+    const uniqueNewKws = Array.from(new Set(newKws));
+
+    if (uniqueNewKws.length > 0) {
+      userKeywords.push(...uniqueNewKws);
+    }
 
     if (importedAutoBlocks.length > 0) {
       for (const kw of importedAutoBlocks) {
@@ -410,7 +421,11 @@ importFile.addEventListener('change', async (e) => {
 
     renderUserKeywords();
     await autoSave();
-    showStatus(`成功导入 ${importedKeywords.length} 个屏蔽词`);
+    if (uniqueNewKws.length > 0) {
+      showStatus(`成功导入 ${uniqueNewKws.length} 个新屏蔽词`);
+    } else {
+      showStatus('未发现新词，词库已包含这些内容');
+    }
   } catch (err) {
     console.error('Import error:', err);
     showStatus('导入失败，文件格式有误');
@@ -561,7 +576,7 @@ importAllFile.addEventListener('change', async (e) => {
 });
 
 function formatHistoryTime(timestamp) {
-  if (!Number.isFinite(timestamp)) return '';
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return '';
   const date = new Date(timestamp);
   const now = new Date();
 
@@ -1010,10 +1025,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   isLoading = false;
   updateCloudInfo();
 
-  if (
-    !items.lastSyncTime ||
-    Date.now() - items.lastSyncTime > SYNC_INTERVAL_MS
-  ) {
+  if (!items.lastSyncTime || Date.now() - items.lastSyncTime > SYNC_INTERVAL_MS) {
     syncBtn.dataset.syncStartTime = Date.now();
     syncBtn.classList.add('syncing');
     triggerCloudSync();
@@ -1337,6 +1349,7 @@ function renderHistoryPage() {
     return;
   }
 
+  const cleanSearchQuery = currentSearchQuery.replace(/^[@\/]/v, '');
   const newSpans = [];
   const fragment = document.createDocumentFragment();
   for (let i = start; i < end; i++) {
@@ -1351,13 +1364,13 @@ function renderHistoryPage() {
         textContent: displayName,
         title: displayName,
       });
-      highlightText(nameSpan, currentSearchQuery);
+      highlightText(nameSpan, cleanSearchQuery || currentSearchQuery);
       userInfo.append(nameSpan);
       newSpans.push(nameSpan);
     }
     if (handle) {
       const handleSpan = el('span', { className: 'history-handle', textContent: `@${handle}` });
-      highlightText(handleSpan, currentSearchQuery);
+      highlightText(handleSpan, cleanSearchQuery || currentSearchQuery);
       userInfo.append(handleSpan);
     }
 
