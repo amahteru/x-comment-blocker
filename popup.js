@@ -1054,11 +1054,7 @@ if (blockAllHistoryBtn) {
     if (blockAllHistoryBtn.disabled) return;
 
     const usersToBlock = Array.from(
-      new Set(
-        filteredHistory
-          .map((item) => extractCleanScreenName(item.user))
-          .filter(Boolean),
-      ),
+      new Set(filteredHistory.map((item) => extractCleanScreenName(item.user)).filter(Boolean)),
     );
 
     if (usersToBlock.length === 0) {

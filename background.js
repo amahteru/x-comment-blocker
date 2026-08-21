@@ -251,9 +251,9 @@ class AutoBlockManager {
     await this.init();
     if (!screenNames || screenNames.length === 0) return 0;
 
-    const validNames = Array.from(
-      new Set(screenNames.map(extractCleanScreenName)),
-    ).filter((name) => name && !this.queue.includes(name) && !this.blockedUsersSet.has(name));
+    const validNames = Array.from(new Set(screenNames.map(extractCleanScreenName))).filter(
+      (name) => name && !this.queue.includes(name) && !this.blockedUsersSet.has(name),
+    );
 
     if (validNames.length > 0) {
       this.queue.push(...validNames);
