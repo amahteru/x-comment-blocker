@@ -103,17 +103,13 @@
             candidateCloudKws.push(...list);
           }
         }
-        cloudKws = Array.from(
-          new Set(candidateCloudKws).difference(new Set(disabledCloudKws)),
-        );
+        cloudKws = Array.from(new Set(candidateCloudKws).difference(new Set(disabledCloudKws)));
       }
 
       const blockKeywordsSet = new Set([...cloudKws, ...userKws]);
       const blockKeywords = Array.from(blockKeywordsSet);
       const rawAutoBlockKws = items.autoBlockKeywords ?? [];
-      const autoBlockKws = Array.from(
-        new Set(rawAutoBlockKws).intersection(blockKeywordsSet),
-      );
+      const autoBlockKws = Array.from(new Set(rawAutoBlockKws).intersection(blockKeywordsSet));
 
       const newKey = `${blockKeywords.join('\n')}|AUTO:|${autoBlockKws.join('\n')}`;
       if (newKey === lastKeywordsKey) return;
