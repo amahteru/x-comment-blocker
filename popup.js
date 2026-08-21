@@ -1010,10 +1010,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   isLoading = false;
   updateCloudInfo();
 
-  if (
-    !items.lastSyncTime ||
-    Date.now() - items.lastSyncTime > SYNC_INTERVAL_MS
-  ) {
+  if (!items.lastSyncTime || Date.now() - items.lastSyncTime > SYNC_INTERVAL_MS) {
     syncBtn.dataset.syncStartTime = Date.now();
     syncBtn.classList.add('syncing');
     triggerCloudSync();
