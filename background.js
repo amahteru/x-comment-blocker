@@ -283,7 +283,8 @@ class AutoBlockManager {
 
           if (this.queue.length === 0) break;
 
-          const currentItem = this.queue.at(0);
+          const currentItem = this.queue.shift();
+          await this.saveState({ autoBlockQueue: this.queue });
 
           let outcome = null;
           let failReason = '';
@@ -308,19 +309,8 @@ class AutoBlockManager {
             failReason = 'task error';
           }
 
-          const storageQueue =
-            (await chrome.storage.local.get('autoBlockQueue')).autoBlockQueue ?? [];
-          const queueUnchanged =
-            storageQueue.length === this.queue.length &&
-            storageQueue.every((item, index) => item === this.queue[index]);
-          if (!queueUnchanged) {
-            console.warn('[X-Blocker] Auto block queue changed externally, re-syncing.');
-            continue;
-          }
-
           if (outcome === 'success') {
             this.retryCounts.delete(currentItem);
-            this.queue.shift();
             this.countToday++;
             this.batchCount++;
             this.blockedUsersSet.add(currentItem);
@@ -338,9 +328,11 @@ class AutoBlockManager {
             });
           } else if (outcome === 'rate-limited') {
             console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
+            this.queue.unshift(currentItem);
             this.pausedUntil = pauseUntil;
             this.batchCount = 0;
             await this.saveState({
+              autoBlockQueue: this.queue,
               autoBlockPausedUntil: this.pausedUntil,
               autoBlockBatchCount: this.batchCount,
             });
@@ -353,23 +345,22 @@ class AutoBlockManager {
                 `[X-Blocker] Auto block giving up on ${currentItem} after ${attempts} attempts:`,
                 failReason,
               );
-              this.queue.shift();
               this.retryCounts.delete(currentItem);
+              await this.saveState({ autoBlockQueue: this.queue });
             } else {
               console.warn(
                 `[X-Blocker] Auto block transient failure for ${currentItem}, retry ${attempts}/${MAX_BLOCK_RETRIES}:`,
                 failReason,
               );
-              this.queue.push(this.queue.shift());
+              this.queue.push(currentItem);
+              await this.saveState({ autoBlockQueue: this.queue });
               await new Promise((r) =>
                 setTimeout(r, Math.min(30_000, 5_000 * 2 ** (attempts - 1))),
               );
             }
-            await this.saveState({ autoBlockQueue: this.queue });
           } else {
             this.retryCounts.delete(currentItem);
             console.error('[X-Blocker] Auto block failed for', currentItem, failReason);
-            this.queue.shift();
             await this.saveState({ autoBlockQueue: this.queue });
           }
 
