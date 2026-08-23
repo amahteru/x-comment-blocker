@@ -319,17 +319,7 @@
         if (['br', 'div', 'p'].includes(tagName)) {
           if (text && !text.endsWith('\n')) text += '\n';
         } else if (tagName === 'img' && currentNode.alt) {
-          let altText = currentNode.alt;
-          if (
-            currentNode.src &&
-            (currentNode.src.includes('emoji') || currentNode.src.includes('twemoji')) &&
-            !altText.endsWith('\uFE0F')
-          ) {
-            if (altText.length <= 2) {
-              altText += '\uFE0F';
-            }
-          }
-          text += altText;
+          text += currentNode.alt;
         }
       }
       currentNode = walker.nextNode();
@@ -704,7 +694,7 @@
 
   function scheduleFilter() {
     if (!isExtensionAlive()) return;
-    if (filterTimer) cancelAnimationFrame(filterTimer);
-    filterTimer = requestAnimationFrame(() => filterTweets());
+    if (filterTimer) clearTimeout(filterTimer);
+    filterTimer = setTimeout(filterTweets, 0);
   }
 })();
