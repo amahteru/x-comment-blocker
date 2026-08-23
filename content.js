@@ -488,7 +488,12 @@
 
   function getPreviousArticleCell(tweet) {
     let curr = tweet.previousElementSibling;
-    while (curr && !curr.querySelector('article')) {
+    while (
+      curr &&
+      !curr.querySelector('article') &&
+      !curr.querySelector('button, [role="button"]') &&
+      !curr.querySelector('.r-1bnu78o')
+    ) {
       curr = curr.previousElementSibling;
     }
     return curr;
@@ -496,7 +501,22 @@
 
   function isReplyToParent(tweet, userNode = null, textNode = null, article = null) {
     const actualArticle = article ?? tweet.querySelector('article');
-    if (!actualArticle) return false;
+    if (!actualArticle) {
+      return (
+        !isDiscoverMoreHeader(tweet) &&
+        !!(tweet.querySelector('button, [role="button"]') || tweet.querySelector('.r-1bnu78o'))
+      );
+    }
+
+    const avatar = tweet.querySelector('[data-testid="Tweet-User-Avatar"]');
+    if (avatar) {
+      const lines = tweet.querySelectorAll('.r-1bnu78o');
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].compareDocumentPosition(avatar) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          return true;
+        }
+      }
+    }
 
     const actualUserNode = userNode ?? tweet.querySelector('[data-testid="User-Name"]');
     const actualTextNode = textNode ?? tweet.querySelector('[data-testid="tweetText"]');
@@ -586,6 +606,7 @@
       const article = tweet.querySelector('article');
       if (!article) {
         state.quickHash = '';
+        updateReplyHiding(tweet, null, null, null, isDiscoverMore);
         continue;
       }
 
