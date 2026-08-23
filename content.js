@@ -352,21 +352,17 @@
 
   function getTweetStatusInfo(tweet, pageStatusId) {
     const timeElements = tweet.querySelectorAll('time');
-    let firstFoundId = null;
     for (let i = 0; i < timeElements.length; i++) {
       const href = timeElements[i].closest('a')?.getAttribute('href');
       if (href) {
         const match = href.match(/\/status\/(\d+)/iv);
         if (match) {
           const id = match[1];
-          if (pageStatusId && id === pageStatusId) {
-            return { id, isMainTweet: true };
-          }
-          firstFoundId ??= id;
+          return { id, isMainTweet: !!(pageStatusId && id === pageStatusId) };
         }
       }
     }
-    return { id: firstFoundId, isMainTweet: false };
+    return { id: null, isMainTweet: false };
   }
 
   function getPageContext() {
@@ -509,10 +505,6 @@
   }
 
   function isReplyToParent(tweet, userNode = null, textNode = null, article = null) {
-    if (tweet.querySelector('div[style*="width: 2px"], div[style*="width:2px"]')) {
-      return true;
-    }
-
     const actualArticle = article ?? tweet.querySelector('article');
     if (!actualArticle) return false;
 
