@@ -486,7 +486,10 @@
       const divs = tweet.querySelectorAll('div');
       for (let i = 0; i < divs.length; i++) {
         const d = divs[i];
-        if ((d.compareDocumentPosition(avatar) & Node.DOCUMENT_POSITION_FOLLOWING) && !d.contains(avatar)) {
+        if (
+          d.compareDocumentPosition(avatar) & Node.DOCUMENT_POSITION_FOLLOWING &&
+          !d.contains(avatar)
+        ) {
           const cls = d.className || '';
           if (cls.includes('r-15zivkp') || cls.includes('r-m5arl1') || cls.includes('r-1bnu78o')) {
             return true;
@@ -502,7 +505,7 @@
       const link = allLinks[i];
       if (!link.textContent?.trim().startsWith('@')) continue;
       if (userNode?.contains(link) || textNode?.contains(link)) continue;
-      if (!textNode || (link.compareDocumentPosition(textNode) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+      if (!textNode || link.compareDocumentPosition(textNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
         return true;
       }
     }
