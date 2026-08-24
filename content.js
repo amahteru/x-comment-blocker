@@ -497,7 +497,7 @@
   function isReplyToParent(tweet, article) {
     if (!article) {
       const btn = tweet.querySelector('button, [role="button"]');
-      return !!(btn && btn.querySelector('.r-1bnu78o, .r-m5arl1, .r-epq5cr'));
+      return !!btn?.querySelector('.r-1bnu78o, .r-m5arl1, .r-epq5cr');
     }
 
     const avatar = tweet.querySelector('[data-testid="Tweet-User-Avatar"]');
@@ -505,7 +505,10 @@
       const lines = tweet.querySelectorAll('.r-15zivkp, .r-m5arl1, .r-1bnu78o');
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        if ((line.compareDocumentPosition(avatar) & Node.DOCUMENT_POSITION_FOLLOWING) && !line.contains(avatar)) {
+        if (
+          line.compareDocumentPosition(avatar) & Node.DOCUMENT_POSITION_FOLLOWING &&
+          !line.contains(avatar)
+        ) {
           return true;
         }
       }
