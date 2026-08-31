@@ -14,6 +14,9 @@ export function cleanInvisibleChars(str) {
   return hasInvisibleCharsRegex.test(str) ? str.replace(invisibleCharsRegex, '') : str;
 }
 
+export const escapeRegExp = (s) =>
+  s ? (RegExp.escape?.(s) ?? s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) : '';
+
 const fastHandleRegex = /^[@\/]?(?<handle>[a-zA-Z0-9_]{1,15})$/v;
 
 export function isKeywordRegex(k) {

@@ -8,6 +8,7 @@
     parseCategorizedKeywords,
     cleanInvisibleChars,
     extractCleanScreenName,
+    escapeRegExp,
   } = await import(browserApi.runtime.getURL('utils.js'));
   let blockRegexes = [];
   let autoBlockRegexes = [];
@@ -28,8 +29,6 @@
   const spamCharsRegex =
     /[\u02B0-\u02FF\u0F00-\u0FFF\u1D00-\u1D7F\u1D80-\u1DBF\u2070-\u209F\u2100-\u2BFF\uA980-\uA9DF\uAA00-\uAADF\u{13000}-\u{1342F}\u{1D400}-\u{1D7FF}]/v;
   const displayNamePunctRegex = /[\s_.\-]+/gv;
-  const regexMetaCharRegex = /[.*+?^$\{\}\(\)\|\[\]\\]/v;
-  const escapeChar = (c) => (regexMetaCharRegex.test(c) ? `\\${c}` : c);
 
   function isExtensionAlive() {
     return !!chrome.runtime?.id;
@@ -71,7 +70,7 @@
     function stringify(node) {
       const keys = Object.keys(node);
       if (!keys.length) return '';
-      const branches = keys.map((k) => escapeChar(k) + stringify(node[k]));
+      const branches = keys.map((k) => escapeRegExp(k) + stringify(node[k]));
       return branches.length > 1 ? `(?:${branches.join('|')})` : branches[0];
     }
 

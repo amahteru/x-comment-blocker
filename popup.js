@@ -1,5 +1,6 @@
 import {
   browserApi as chrome,
+  escapeRegExp,
   extractCleanScreenName,
   getLocalDateString,
   getResolvedCategoryToggles,
@@ -715,11 +716,13 @@ async function renderCloudKeywords() {
   cloudModalSubtitle.textContent = currentCloudSearchQuery
     ? `(搜索到 ${cloudList.length} 个词)`
     : `(共 ${cloudList.length} 个词)`;
+  const highlightRegex =
+    currentCloudSearchQuery && new RegExp(escapeRegExp(currentCloudSearchQuery), 'giv');
   const tags = cloudList.map((kw) => {
     const isRegex = isKeywordRegex(kw);
     const textSpan = el('span', { className: 'tag-text', textContent: kw, title: kw });
 
-    highlightText(textSpan, currentCloudSearchQuery);
+    highlightText(textSpan, highlightRegex);
 
     const isDisabled = disabledList.includes(kw);
     const isAutoBlock = autoBlockKeywords.has(kw);
@@ -1260,18 +1263,14 @@ function updateFilterOptions() {
 }
 
 function highlightText(element, query) {
-  if (!query) return;
+  if (!element || !query) return;
+  const regex = query instanceof RegExp ? query : new RegExp(escapeRegExp(query), 'giv');
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   const matches = [];
-  const regex = new RegExp(
-    RegExp.escape?.(query) ?? query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-    'giv',
-  );
   while (walker.nextNode()) {
     const node = walker.currentNode;
-    const text = node.textContent;
-    for (const match of text.matchAll(regex)) {
-      matches.push({ node, index: match.index, length: query.length });
+    for (const match of node.textContent.matchAll(regex)) {
+      if (match[0].length) matches.push({ node, index: match.index, length: match[0].length });
     }
   }
   matches.toReversed().forEach(({ node, index, length }) => {
@@ -1341,6 +1340,10 @@ function renderHistoryPage() {
 
   const cleanSearchQuery = currentSearchQuery.replace(/^[@\/]/v, '');
   const targetHighlightQuery = cleanSearchQuery || currentSearchQuery;
+  const targetHighlightRegex =
+    targetHighlightQuery && new RegExp(escapeRegExp(targetHighlightQuery), 'giv');
+  const searchRegex = currentSearchQuery && new RegExp(escapeRegExp(currentSearchQuery), 'giv');
+
   const newSpans = [];
   const fragment = document.createDocumentFragment();
   for (let i = start; i < end; i++) {
@@ -1355,13 +1358,13 @@ function renderHistoryPage() {
         textContent: displayName,
         title: displayName,
       });
-      highlightText(nameSpan, targetHighlightQuery);
+      highlightText(nameSpan, targetHighlightRegex);
       userInfo.append(nameSpan);
       newSpans.push(nameSpan);
     }
     if (handle) {
       const handleSpan = el('span', { className: 'history-handle', textContent: `@${handle}` });
-      highlightText(handleSpan, targetHighlightQuery);
+      highlightText(handleSpan, targetHighlightRegex);
       userInfo.append(handleSpan);
     }
 
@@ -1422,7 +1425,7 @@ function renderHistoryPage() {
     let displayText = item.text || '[无内容或已隐藏]';
     if (item.reason) displayText = `[${item.reason}] ${displayText}`;
     const textDiv = el('div', { className: 'history-item-text', textContent: displayText });
-    highlightText(textDiv, currentSearchQuery);
+    highlightText(textDiv, searchRegex);
 
     const div = el('div', { className: 'history-item' }, [
       el('div', { className: 'history-item-header' }, [userInfo, actionsDiv]),
@@ -1528,10 +1531,12 @@ function renderWhitelist(animateIndex = -1, fadeIndex = -1) {
 
   whitelistCount.textContent = `(${whitelist.length})`;
 
+  const highlightRegex =
+    (cleanQuery || query) && new RegExp(escapeRegExp(cleanQuery || query), 'giv');
   const nodes = filteredWhitelist.map((handle) => {
     const index = whitelist.indexOf(handle);
     const textSpan = el('span', { className: 'tag-text', textContent: `@${handle}` });
-    highlightText(textSpan, query);
+    highlightText(textSpan, highlightRegex);
 
     const editBtn = el('button', {
       className: 'tag-btn tag-btn-edit',
