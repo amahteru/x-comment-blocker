@@ -1263,7 +1263,10 @@ function highlightText(element, query) {
   if (!query) return;
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   const matches = [];
-  const regex = new RegExp(RegExp.escape(query), 'giv');
+  const regex = new RegExp(
+    RegExp.escape?.(query) ?? query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+    'giv',
+  );
   while (walker.nextNode()) {
     const node = walker.currentNode;
     const text = node.textContent;
