@@ -21,7 +21,7 @@
 body {
   width: 100%;
   min-width: 340px;
-  padding: 20px;
+  padding: 24px 20px 28px;
   background-color: var(--bg);
   color: var(--text);
   font-family:
@@ -32,7 +32,7 @@ body {
 }
 
 .header {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -41,27 +41,33 @@ body {
 
 .header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .title-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+}
+
+.version-tag {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.header p {
-  margin: 4px 0 0;
-  font-size: 12px;
-  color: var(--text-muted);
 }
 
 .section-header {
@@ -107,7 +113,7 @@ body {
 .keyword-input-row {
   position: relative;
   display: flex;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .keyword-input-row input {
@@ -437,7 +443,7 @@ body {
   position: absolute;
   left: 20px;
   right: 20px;
-  bottom: 4px;
+  bottom: 7px;
   font-size: 12px;
   color: var(--accent);
   text-align: center;
@@ -493,12 +499,13 @@ body {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
-  margin: 16px 0;
+  margin: 16px 0 0;
   overflow: hidden;
 }
 
 .settings-header {
-  padding: 12px;
+  height: 38px;
+  padding: 0 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
