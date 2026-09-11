@@ -50,18 +50,7 @@ body {
 .title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-.version-tag {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-muted);
-  background: var(--card);
-  border: 1px solid var(--border);
-  padding: 1px 5px;
-  border-radius: 4px;
-  line-height: 1.2;
+  gap: 4px;
 }
 
 .header-actions {

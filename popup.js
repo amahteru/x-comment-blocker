@@ -56,14 +56,6 @@ const syncBtn = document.getElementById('sync-btn');
 const statusEl = document.getElementById('status');
 const blockedCountEl = document.getElementById('blockedCount');
 const resetCountBtn = document.getElementById('resetCount');
-const appVersionEl = document.getElementById('appVersion');
-
-try {
-  const manifest = chrome?.runtime?.getManifest?.();
-  if (manifest?.version && appVersionEl) {
-    appVersionEl.textContent = `v${manifest.version}`;
-  }
-} catch (_) {}
 
 const viewHistoryBtn = document.getElementById('viewHistory');
 const historyModal = document.getElementById('historyModal');
