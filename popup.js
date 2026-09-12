@@ -764,7 +764,6 @@ async function renderCloudKeywords() {
       'span',
       {
         className: `keyword-tag${isRegex ? ' regex-tag' : ''}${isDisabled ? ' is-disabled' : ''}${isAutoBlock && !isEditingCloudAutoBlock ? ' is-autoblock' : ''}`,
-        style: 'width: calc(50% - 5px);',
       },
       tagChildren,
     );
