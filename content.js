@@ -493,6 +493,11 @@
     return curr;
   }
 
+  function isThreadLineWidth(el) {
+    const w = el.offsetWidth || parseFloat(window.getComputedStyle(el).width) || 0;
+    return w >= 1 && w <= 4;
+  }
+
   function hasDownwardThreadLine(cell) {
     if (!cell) return false;
     let state = tweetStateMap.get(cell);
@@ -503,23 +508,15 @@
     }
 
     const avatar = cell.querySelector('[data-testid="Tweet-User-Avatar"]');
-    if (!avatar?.parentElement) {
+    const children = avatar?.parentElement?.children;
+    if (!children || children.length <= 1) {
       state.hasDownwardLine = false;
       return false;
     }
 
-    const children = Array.from(avatar.parentElement.children);
-    if (children.length <= 1) {
-      state.hasDownwardLine = false;
-      return false;
-    }
-
-    const hasLine = children.some((child) => {
-      if (child === avatar) return false;
-      const w = child.offsetWidth || parseFloat(window.getComputedStyle(child).width) || 0;
-      return w >= 1 && w <= 4;
-    });
-
+    const hasLine = Array.from(children).some(
+      (child) => child !== avatar && isThreadLineWidth(child),
+    );
     state.hasDownwardLine = hasLine;
     return hasLine;
   }
@@ -540,25 +537,13 @@
     }
 
     const precedingRow = avatar.parentElement?.parentElement?.previousElementSibling;
-    if (precedingRow) {
-      const rowInner = precedingRow.firstElementChild || precedingRow;
-      if (rowInner?.children?.length > 1) {
-        const firstCol = rowInner.firstElementChild;
-        if (firstCol) {
-          const hasLine = Array.from(firstCol.querySelectorAll('*')).some((el) => {
-            const w = el.offsetWidth || parseFloat(window.getComputedStyle(el).width) || 0;
-            return w >= 1 && w <= 4;
-          });
-          if (hasLine) {
-            state.hasUpwardLine = true;
-            return true;
-          }
-        }
-      }
-    }
+    const rowInner = precedingRow?.firstElementChild || precedingRow;
+    const firstCol = rowInner?.children?.length > 1 ? rowInner.firstElementChild : null;
+    const hasLine =
+      !!firstCol && Array.from(firstCol.querySelectorAll('*')).some(isThreadLineWidth);
 
-    state.hasUpwardLine = false;
-    return false;
+    state.hasUpwardLine = hasLine;
+    return hasLine;
   }
 
   function isReplyToParent(tweet, article, prev) {
