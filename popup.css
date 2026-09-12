@@ -107,6 +107,7 @@ body {
 
 .keyword-input-row input {
   flex: 1;
+  min-width: 0;
   height: 40px;
   background: var(--card);
   border: 1px solid var(--border);
@@ -210,7 +211,10 @@ body {
   transition:
     border-color 0.2s,
     background 0.2s;
-  width: calc(50% - 4px);
+  width: 0;
+  flex: 0 0 calc(50% - 4px);
+  max-width: calc(50% - 4px);
+  min-width: 0;
   height: 28px;
   box-sizing: border-box;
 }
