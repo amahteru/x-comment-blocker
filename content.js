@@ -469,10 +469,7 @@
   function isDiscoverMoreHeader(node) {
     if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
     if (node.querySelector('article')) return false;
-    return !!(
-      node.matches?.('h2, [role="heading"]') ||
-      node.querySelector('h2, [role="heading"]')
-    );
+    return !!(node.matches?.('h2, [role="heading"]') || node.querySelector('h2, [role="heading"]'));
   }
 
   function isAfterDiscoverMore(tweet) {
