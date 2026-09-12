@@ -469,7 +469,10 @@
   function isDiscoverMoreHeader(node) {
     if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
     if (node.querySelector('article')) return false;
-    return !!node.querySelector('h2, [role="heading"]');
+    return !!(
+      node.matches?.('h2, [role="heading"]') ||
+      node.querySelector('h2, [role="heading"]')
+    );
   }
 
   function isAfterDiscoverMore(tweet) {
@@ -493,27 +496,50 @@
     return curr;
   }
 
-  function isReplyToParent(tweet, article) {
+  function hasDownwardThreadLine(cell) {
+    if (!cell) return false;
+    const state = tweetStateMap.get(cell);
+    if (state?.hasDownwardLine !== undefined) return state.hasDownwardLine;
+
+    const avatar = cell.querySelector('[data-testid="Tweet-User-Avatar"]');
+    if (!avatar || !avatar.parentElement) {
+      if (state) state.hasDownwardLine = false;
+      return false;
+    }
+    const children = Array.from(avatar.parentElement.children);
+    const hasLine = children.some((child) => {
+      if (child === avatar) return false;
+      const cs = window.getComputedStyle(child);
+      const w = parseFloat(cs.width);
+      return (w >= 1 && w <= 4) || (cs.borderLeftWidth && parseFloat(cs.borderLeftWidth) >= 1);
+    });
+
+    if (state) state.hasDownwardLine = hasLine;
+    return hasLine;
+  }
+
+  function hasUpwardThreadLine(cell) {
+    if (!cell) return false;
+    const avatar = cell.querySelector('[data-testid="Tweet-User-Avatar"]');
+    if (!avatar || !avatar.parentElement) return false;
+    const children = Array.from(avatar.parentElement.children);
+    return children.indexOf(avatar) > 0;
+  }
+
+  function isReplyToParent(tweet, article, prev) {
+    if (!prev) return false;
+
     if (!article) {
       const btn = tweet.querySelector('button, [role="button"]');
-      return !!btn?.querySelector('.r-1bnu78o, .r-m5arl1, .r-epq5cr');
+      if (!btn || isDiscoverMoreHeader(tweet)) return false;
+      return hasDownwardThreadLine(prev) || !prev.querySelector('article');
     }
 
-    const avatar = tweet.querySelector('[data-testid="Tweet-User-Avatar"]');
-    if (avatar) {
-      const lines = tweet.querySelectorAll('.r-15zivkp, .r-m5arl1, .r-1bnu78o');
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (
-          line.compareDocumentPosition(avatar) & Node.DOCUMENT_POSITION_FOLLOWING &&
-          !line.contains(avatar)
-        ) {
-          return true;
-        }
-      }
+    if (!prev.querySelector('article')) {
+      return hasUpwardThreadLine(tweet);
     }
 
-    return false;
+    return hasDownwardThreadLine(prev) || hasUpwardThreadLine(tweet);
   }
 
   function updateReplyHiding(tweet, article, isDiscoverMore) {
@@ -523,7 +549,7 @@
       prev &&
       (prev.classList.contains('x-comment-blocker-hidden') ||
         prev.classList.contains('x-comment-blocker-hidden-reply'));
-    const isHiddenReply = isPrevHidden && isReplyToParent(tweet, article);
+    const isHiddenReply = isPrevHidden && isReplyToParent(tweet, article, prev);
 
     if (isHiddenReply) {
       tweet.classList.add('x-comment-blocker-hidden-reply');
