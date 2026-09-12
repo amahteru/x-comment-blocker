@@ -516,8 +516,7 @@
 
     const hasLine = children.some((child) => {
       if (child === avatar) return false;
-      if (child.matches?.('.r-1bnu78o, .r-m5arl1, .r-15zivkp')) return true;
-      const w = parseFloat(window.getComputedStyle(child).width);
+      const w = child.offsetWidth || parseFloat(window.getComputedStyle(child).width) || 0;
       return w >= 1 && w <= 4;
     });
 
@@ -542,14 +541,19 @@
 
     const precedingRow = avatar.parentElement?.parentElement?.previousElementSibling;
     if (precedingRow) {
-      if (precedingRow.querySelector?.('.r-1bnu78o, .r-m5arl1, .r-15zivkp')) {
-        state.hasUpwardLine = true;
-        return true;
-      }
       const rowInner = precedingRow.firstElementChild || precedingRow;
       if (rowInner?.children?.length > 1) {
-        state.hasUpwardLine = true;
-        return true;
+        const firstCol = rowInner.firstElementChild;
+        if (firstCol) {
+          const hasLine = Array.from(firstCol.querySelectorAll('*')).some((el) => {
+            const w = el.offsetWidth || parseFloat(window.getComputedStyle(el).width) || 0;
+            return w >= 1 && w <= 4;
+          });
+          if (hasLine) {
+            state.hasUpwardLine = true;
+            return true;
+          }
+        }
       }
     }
 

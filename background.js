@@ -137,8 +137,6 @@ chrome.runtime.onInstalled.addListener(async () => {
     periodInMinutes: SYNC_INTERVAL_MINUTES,
   });
 
-  await doSync();
-
   chrome.alarms.create('autoBlockWatchdog', {
     delayInMinutes: 1,
     periodInMinutes: 1,
@@ -153,6 +151,8 @@ chrome.runtime.onInstalled.addListener(async () => {
       documentUrlPatterns: ['*://*.twitter.com/*', '*://*.x.com/*'],
     });
   }
+
+  doSync().catch(() => {});
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
