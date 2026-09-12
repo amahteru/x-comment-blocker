@@ -469,10 +469,26 @@
   function isDiscoverMoreHeader(node) {
     if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
     if (node.querySelector('article')) return false;
-    return !!(
-      node.matches?.('h2, [role="heading"]') ||
-      node.querySelector('h2, [role="heading"]')
-    );
+    const heading = node.matches?.('h2, [role="heading"]')
+      ? node
+      : node.querySelector('h2, [role="heading"]');
+    if (!heading) return false;
+
+    // Pure web element check: Discover more is separated by a timeline terminator / end spacer
+    let curr = node.previousElementSibling;
+    let hasTimelineTerminatorBefore = false;
+    while (curr) {
+      if (
+        curr.matches?.('[role="separator"]') ||
+        curr.querySelector?.('[role="separator"]') ||
+        (curr.offsetHeight >= 150 && !curr.querySelector('article') && !curr.textContent.trim())
+      ) {
+        hasTimelineTerminatorBefore = true;
+        break;
+      }
+      curr = curr.previousElementSibling;
+    }
+    return hasTimelineTerminatorBefore;
   }
 
   function isAfterDiscoverMore(tweet) {
@@ -488,9 +504,9 @@
     return false;
   }
 
-  function getPreviousCell(tweet) {
-    let curr = tweet.previousElementSibling;
-    while (curr && !curr.querySelector('article, button, [role="button"]')) {
+  function getPreviousCell(cell) {
+    let curr = cell.previousElementSibling;
+    while (curr && !curr.matches('[data-testid="cellInnerDiv"]')) {
       curr = curr.previousElementSibling;
     }
     return curr;
@@ -498,32 +514,71 @@
 
   function hasDownwardThreadLine(cell) {
     if (!cell) return false;
-    const state = tweetStateMap.get(cell);
+    let state = tweetStateMap.get(cell);
     if (state?.hasDownwardLine !== undefined) return state.hasDownwardLine;
+    if (!state) {
+      state = {};
+      tweetStateMap.set(cell, state);
+    }
 
     const avatar = cell.querySelector('[data-testid="Tweet-User-Avatar"]');
-    if (!avatar || !avatar.parentElement) {
-      if (state) state.hasDownwardLine = false;
+    if (!avatar?.parentElement) {
+      state.hasDownwardLine = false;
       return false;
     }
+
     const children = Array.from(avatar.parentElement.children);
+    if (children.length <= 1) {
+      state.hasDownwardLine = false;
+      return false;
+    }
+
     const hasLine = children.some((child) => {
       if (child === avatar) return false;
-      const cs = window.getComputedStyle(child);
-      const w = parseFloat(cs.width);
-      return (w >= 1 && w <= 4) || (cs.borderLeftWidth && parseFloat(cs.borderLeftWidth) >= 1);
+      const w = child.offsetWidth || parseFloat(window.getComputedStyle(child).width);
+      return w >= 1 && w <= 4;
     });
 
-    if (state) state.hasDownwardLine = hasLine;
+    state.hasDownwardLine = hasLine;
     return hasLine;
   }
 
   function hasUpwardThreadLine(cell) {
     if (!cell) return false;
+    let state = tweetStateMap.get(cell);
+    if (state?.hasUpwardLine !== undefined) return state.hasUpwardLine;
+    if (!state) {
+      state = {};
+      tweetStateMap.set(cell, state);
+    }
+
     const avatar = cell.querySelector('[data-testid="Tweet-User-Avatar"]');
-    if (!avatar || !avatar.parentElement) return false;
-    const children = Array.from(avatar.parentElement.children);
-    return children.indexOf(avatar) > 0;
+    if (!avatar) {
+      state.hasUpwardLine = false;
+      return false;
+    }
+
+    const precedingRow = avatar.parentElement?.parentElement?.previousElementSibling;
+    if (precedingRow) {
+      const rowInner = precedingRow.firstElementChild || precedingRow;
+      if (rowInner?.children?.length > 1) {
+        state.hasUpwardLine = true;
+        return true;
+      }
+    }
+
+    const lineCandidate = avatar.parentElement?.parentElement?.firstElementChild;
+    if (lineCandidate && lineCandidate !== avatar.parentElement) {
+      const w =
+        lineCandidate.offsetWidth || parseFloat(window.getComputedStyle(lineCandidate).width);
+      if (w >= 1 && w <= 4) {
+        state.hasUpwardLine = true;
+        return true;
+      }
+    }
+
+    state.hasUpwardLine = false;
+    return false;
   }
 
   function isReplyToParent(tweet, article, prev) {
