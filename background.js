@@ -137,7 +137,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     periodInMinutes: SYNC_INTERVAL_MINUTES,
   });
 
-  doSync();
+  await doSync();
 
   chrome.alarms.create('autoBlockWatchdog', {
     delayInMinutes: 1,

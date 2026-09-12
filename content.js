@@ -469,26 +469,7 @@
   function isDiscoverMoreHeader(node) {
     if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
     if (node.querySelector('article')) return false;
-    const heading = node.matches?.('h2, [role="heading"]')
-      ? node
-      : node.querySelector('h2, [role="heading"]');
-    if (!heading) return false;
-
-    // Pure web element check: Discover more is separated by a timeline terminator / end spacer
-    let curr = node.previousElementSibling;
-    let hasTimelineTerminatorBefore = false;
-    while (curr) {
-      if (
-        curr.matches?.('[role="separator"]') ||
-        curr.querySelector?.('[role="separator"]') ||
-        (curr.offsetHeight >= 150 && !curr.querySelector('article') && !curr.textContent.trim())
-      ) {
-        hasTimelineTerminatorBefore = true;
-        break;
-      }
-      curr = curr.previousElementSibling;
-    }
-    return hasTimelineTerminatorBefore;
+    return !!(node.matches?.('h2, [role="heading"]') || node.querySelector('h2, [role="heading"]'));
   }
 
   function isAfterDiscoverMore(tweet) {
@@ -506,7 +487,7 @@
 
   function getPreviousCell(cell) {
     let curr = cell.previousElementSibling;
-    while (curr && !curr.matches('[data-testid="cellInnerDiv"]')) {
+    while (curr && !curr.querySelector('article, button, [role="button"]')) {
       curr = curr.previousElementSibling;
     }
     return curr;
@@ -535,7 +516,8 @@
 
     const hasLine = children.some((child) => {
       if (child === avatar) return false;
-      const w = child.offsetWidth || parseFloat(window.getComputedStyle(child).width);
+      if (child.matches?.('.r-1bnu78o, .r-m5arl1, .r-15zivkp')) return true;
+      const w = parseFloat(window.getComputedStyle(child).width);
       return w >= 1 && w <= 4;
     });
 
@@ -560,18 +542,12 @@
 
     const precedingRow = avatar.parentElement?.parentElement?.previousElementSibling;
     if (precedingRow) {
-      const rowInner = precedingRow.firstElementChild || precedingRow;
-      if (rowInner?.children?.length > 1) {
+      if (precedingRow.querySelector?.('.r-1bnu78o, .r-m5arl1, .r-15zivkp')) {
         state.hasUpwardLine = true;
         return true;
       }
-    }
-
-    const lineCandidate = avatar.parentElement?.parentElement?.firstElementChild;
-    if (lineCandidate && lineCandidate !== avatar.parentElement) {
-      const w =
-        lineCandidate.offsetWidth || parseFloat(window.getComputedStyle(lineCandidate).width);
-      if (w >= 1 && w <= 4) {
+      const rowInner = precedingRow.firstElementChild || precedingRow;
+      if (rowInner?.children?.length > 1) {
         state.hasUpwardLine = true;
         return true;
       }
