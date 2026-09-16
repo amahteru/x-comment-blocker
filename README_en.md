@@ -1,8 +1,6 @@
-# X(Twitter) Comment Blocker
-
 [中文](README.md) | **English**
 
----
+# X(Twitter) Comment Blocker
 
 A browser extension for automatically blocking spam and traffic-driving bots in X (Twitter) comment sections, supporting Chrome, Edge, and Firefox.
 
