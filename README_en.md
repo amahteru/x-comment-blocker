@@ -1,6 +1,4 @@
-<p align="right">
-  <a href="README.md">简体中文</a> | <b>English</b>
-</p>
+[简体中文](README.md) | **English**
 
 # X(Twitter) Comment Blocker
 
