@@ -106,3 +106,10 @@ jobs:
               --generate-notes \
               "${EXTRA_ARGS[@]}"
           fi
+
+      - name: Publish to Web Stores (Chrome & Firefox)
+        uses: PlasmoHQ/bpp@v3
+        with:
+          keys: ${{ secrets.SUBMIT_KEYS }}
+          zip: ${{ steps.version_check.outputs.zip_name }}
+          version-file: manifest.json
