@@ -1,0 +1,108 @@
+name: Package & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (e.g. v1.5.3, leave blank to use manifest version)'
+        required: false
+        default: ''
+
+jobs:
+  build-and-release:
+    name: Package & Release Extension
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract & Verify Version
+        id: version_check
+        env:
+          INPUT_TAG_NAME: ${{ inputs.tag_name }}
+        run: |
+          MANIFEST_VERSION=$(node -p "require('./manifest.json').version")
+          echo "Manifest version: $MANIFEST_VERSION"
+
+          # Determine target tag / version
+          if [ -n "$INPUT_TAG_NAME" ]; then
+            TARGET_TAG="$INPUT_TAG_NAME"
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TARGET_TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TARGET_TAG="v$MANIFEST_VERSION"
+          fi
+
+          VERSION_WITHOUT_V="${TARGET_TAG#v}"
+          echo "Target tag: $TARGET_TAG"
+          echo "Version: $VERSION_WITHOUT_V"
+
+          # Check if git tag matches manifest.json version
+          if [ "$VERSION_WITHOUT_V" != "$MANIFEST_VERSION" ]; then
+            echo "::error::Version mismatch! Tag is '$TARGET_TAG' (version: '$VERSION_WITHOUT_V') but manifest.json version is '$MANIFEST_VERSION'."
+            echo "Please update manifest.json to match your release tag."
+            exit 1
+          fi
+
+          ZIP_NAME="x-comment-blocker-${TARGET_TAG}.zip"
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "target_tag=$TARGET_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Create Extension Package (.zip)
+        env:
+          ZIP_NAME: ${{ steps.version_check.outputs.zip_name }}
+        run: |
+          echo "Packaging extension into $ZIP_NAME..."
+
+          # Package extension files excluding dev/repo metadata
+          zip -r "$ZIP_NAME" . \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "biome.json" \
+            -x "*.md" \
+            -x "*.zip" \
+            -x "keywords.txt" \
+            -x "LICENSE" \
+            -x "*.DS_Store*" \
+            -x "Thumbs.db"
+
+          echo "Zip file created successfully. Contents:"
+          unzip -l "$ZIP_NAME"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.version_check.outputs.zip_name }}
+          path: ${{ steps.version_check.outputs.zip_name }}
+          retention-days: 30
+
+      - name: Create or Update GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_TAG: ${{ steps.version_check.outputs.target_tag }}
+          ZIP_NAME: ${{ steps.version_check.outputs.zip_name }}
+        run: |
+          EXTRA_ARGS=()
+          if [[ "$TARGET_TAG" =~ -(alpha|beta|rc) ]]; then
+            EXTRA_ARGS+=("--prerelease")
+          fi
+
+          if gh release view "$TARGET_TAG" > /dev/null 2>&1; then
+            echo "Release '$TARGET_TAG' already exists, uploading/overwriting asset..."
+            gh release upload "$TARGET_TAG" "$ZIP_NAME" --clobber
+          else
+            echo "Creating new release '$TARGET_TAG'..."
+            gh release create "$TARGET_TAG" "$ZIP_NAME" \
+              --title "$TARGET_TAG" \
+              --generate-notes \
+              "${EXTRA_ARGS[@]}"
+          fi
