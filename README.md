@@ -1,5 +1,7 @@
 # X(Twitter) Comment Blocker
 
+[中文](README.md) | [English](README_en.md)
+
 用于自动屏蔽 X (Twitter) 评论区垃圾信息与引流机器人的浏览器插件，支持 Chrome、Edge 和 Firefox。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
