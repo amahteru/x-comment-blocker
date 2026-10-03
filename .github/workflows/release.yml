@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      zip_name: ${{ steps.version_check.outputs.zip_name }}
+      release_outcome: ${{ steps.release.outcome }}
 
     steps:
       - name: Checkout Code
@@ -85,6 +88,7 @@ jobs:
           retention-days: 30
 
       - name: Create or Update GitHub Release
+        id: release
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -107,9 +111,56 @@ jobs:
               "${EXTRA_ARGS[@]}"
           fi
 
-      - name: Publish to Web Stores (Chrome & Firefox)
+      - name: Remove Chrome from Submit Keys
+        id: firefox_keys
+        env:
+          SUBMIT_KEYS: ${{ secrets.SUBMIT_KEYS }}
+        run: |
+          keys=$(jq -c 'del(.chrome)' <<< "$SUBMIT_KEYS")
+          echo "::add-mask::$keys"
+          echo "keys=$keys" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to Firefox Add-ons
         uses: PlasmoHQ/bpp@v3
         with:
-          keys: ${{ secrets.SUBMIT_KEYS }}
+          keys: ${{ steps.firefox_keys.outputs.keys }}
           zip: ${{ steps.version_check.outputs.zip_name }}
           version-file: manifest.json
+
+  publish-chrome:
+    name: Publish to Chrome Web Store
+    needs: build-and-release
+    if: ${{ !cancelled() && needs.build-and-release.outputs.release_outcome == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: chrome-web-store
+      cancel-in-progress: false
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-and-release.outputs.zip_name }}
+
+      - name: Read Chrome Keys
+        id: chrome_keys
+        env:
+          SUBMIT_KEYS: ${{ secrets.SUBMIT_KEYS }}
+        run: |
+          for field in clientId clientSecret refreshToken; do
+            value=$(jq -er ".chrome.$field" <<< "$SUBMIT_KEYS")
+            echo "::add-mask::$value"
+            echo "$field=$value" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Publish to Chrome Web Store
+        uses: hamzahamidi/publish-to-chrome-web-store@v1
+        with:
+          client-id: ${{ steps.chrome_keys.outputs.clientId }}
+          client-secret: ${{ steps.chrome_keys.outputs.clientSecret }}
+          refresh-token: ${{ steps.chrome_keys.outputs.refreshToken }}
+          publisher-id: ${{ vars.CWS_PUBLISHER_ID }}
+          item-id: gagacedifiphcndckimeihhcbcclkach
+          zip: ${{ needs.build-and-release.outputs.zip_name }}
