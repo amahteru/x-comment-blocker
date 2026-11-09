@@ -3,13 +3,13 @@ name: Package & Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag (e.g. v1.5.3, leave blank to use manifest version)'
+        description: "Release Tag (e.g. v1.5.3, leave blank to use manifest version)"
         required: false
-        default: ''
+        default: ""
 
 jobs:
   build-and-release:
