@@ -562,13 +562,28 @@
     return hasDownwardThreadLine(prev) || hasUpwardThreadLine(tweet);
   }
 
+  function isCellHidden(cell) {
+    return (
+      cell.classList.contains('x-comment-blocker-hidden') ||
+      cell.classList.contains('x-comment-blocker-hidden-reply')
+    );
+  }
+
+  function propagateReplyHiding(cell) {
+    for (let curr = cell.nextElementSibling; curr; curr = curr.nextElementSibling) {
+      if (!curr.querySelector('article, button, [role="button"]')) continue;
+      const state = tweetStateMap.get(curr);
+      if (state?.quickHash === undefined || state.isSpam) return;
+      const wasHidden = isCellHidden(curr);
+      updateReplyHiding(curr, curr.querySelector('article'), state.isDiscoverMore);
+      if (isCellHidden(curr) === wasHidden) return;
+    }
+  }
+
   function updateReplyHiding(tweet, article, isDiscoverMore) {
     const prev = getPreviousCell(tweet);
     const isPrevHidden =
-      !isDiscoverMore &&
-      prev &&
-      (prev.classList.contains('x-comment-blocker-hidden') ||
-        prev.classList.contains('x-comment-blocker-hidden-reply'));
+      !isDiscoverMore && !tweetStateMap.get(tweet)?.isMainTweet && prev && isCellHidden(prev);
     const isHiddenReply = isPrevHidden && isReplyToParent(tweet, article, prev);
 
     if (isHiddenReply) {
@@ -589,6 +604,8 @@
     const pageContext = getPageContext();
     const isStatusPageBase = !!pageContext.pageStatusId;
     let isPastDiscoverMore = false;
+
+    const wasHidden = Array.from(tweets, isCellHidden);
 
     for (let i = 0; i < tweets.length; i++) {
       const tweet = tweets[i];
@@ -658,7 +675,7 @@
 
       let isMainTweet = false;
       let tweetId = null;
-      if (shouldCheck) {
+      if (shouldCheck || (isStatusPage && logicalPageStatusId)) {
         const statusInfo = getTweetStatusInfo(tweet, logicalPageStatusId || null);
         tweetId = statusInfo.id;
 
@@ -666,6 +683,7 @@
           isMainTweet = statusInfo.isMainTweet;
         }
       }
+      state.isMainTweet = isMainTweet;
 
       if (shouldCheck && onlyComments && (isMainTweet || isDiscoverMore)) shouldCheck = false;
 
@@ -725,6 +743,10 @@
       } else {
         updateReplyHiding(tweet, article, isDiscoverMore);
       }
+    }
+
+    for (let i = 0; i < tweets.length; i++) {
+      if (isCellHidden(tweets[i]) !== wasHidden[i]) propagateReplyHiding(tweets[i]);
     }
 
     if (pendingSpam.length > 0) {

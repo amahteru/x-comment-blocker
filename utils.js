@@ -203,22 +203,9 @@ export async function syncCloudKeywords() {
     const cloudList = parseKeywords(text);
 
     const storageItems = await browserApi.storage.local.get(
-      getStorageDefaults('disabledCloudKeywords', 'autoBlockKeywords', 'keywords', 'cloudKeywords'),
+      getStorageDefaults('disabledCloudKeywords', 'autoBlockKeywords', 'keywords'),
     );
 
-    const currentCloudList = parseKeywords(storageItems.cloudKeywords ?? '');
-
-    if (isCDN && cloudList.length < currentCloudList.length) {
-      console.log(
-        `[X-Blocker] CDN cache (${cloudList.length} items) is older than local (${currentCloudList.length} items). Update aborted.`,
-      );
-      await browserApi.storage.local.set({
-        lastSyncTime: Date.now(),
-        syncStatus: 'ok',
-        syncError: '',
-      });
-      return true;
-    }
     const normalizedLines = [];
     for (const line of text.split('\n')) {
       const cleaned = cleanInvisibleChars(line).trim();
