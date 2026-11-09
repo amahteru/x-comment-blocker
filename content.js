@@ -687,13 +687,12 @@
 
       if (shouldCheck && onlyComments && (isMainTweet || isDiscoverMore)) shouldCheck = false;
 
-      const rawTweetText = textNode ? getTweetTextForKeywords(textNode) : '';
       const effectiveStatusPage = isStatusPage && !isDiscoverMore;
       const spamResult = shouldCheck
         ? detectSpam(
             textNode,
             userNode,
-            rawTweetText,
+            textNode ? getTweetTextForKeywords(textNode) : '',
             rawUserName,
             effectiveStatusPage,
             isMainTweet,
