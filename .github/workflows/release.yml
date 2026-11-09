@@ -108,7 +108,7 @@ jobs:
           fi
 
       - name: Publish to Web Stores (Chrome & Firefox)
-        uses: PlasmoHQ/bpp@v3
+        uses: amahteru/bpp@v3
         with:
           keys: ${{ secrets.SUBMIT_KEYS }}
           zip: ${{ steps.version_check.outputs.zip_name }}
