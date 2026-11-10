@@ -72,4 +72,4 @@
 
 ## 协议
 
-本项目基于 [MIT License](./LICENSE) 协议开源。
+本项目采用 [MIT 许可证](./LICENSE) 开源。
