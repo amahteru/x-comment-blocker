@@ -7,6 +7,7 @@
     parseKeywords,
     parseCategorizedKeywords,
     cleanInvisibleChars,
+    compileKeywordRegex,
     extractCleanScreenName,
     escapeRegExp,
   } = await import(browserApi.runtime.getURL('utils.js'));
@@ -122,18 +123,11 @@
         const customRegexes = [];
 
         for (const kw of keywords) {
-          const match = kw.startsWith('/')
-            ? kw.match(/^\/(?<pattern>.+)\/(?<flags>[a-zA-Z]*)$/v)
-            : null;
-          if (match) {
-            try {
-              const cleanFlags = match.groups.flags.replace(/[gy]/gv, '');
-              customRegexes.push(new RegExp(match.groups.pattern, cleanFlags));
-            } catch (e) {
-              console.warn('[X-Blocker] Invalid regex ignored:', kw, e);
-            }
-          } else {
-            plainKeywords.push(kw);
+          try {
+            const compiled = compileKeywordRegex(kw);
+            (compiled ? customRegexes : plainKeywords).push(compiled ?? kw);
+          } catch (e) {
+            console.warn('[X-Blocker] Invalid regex ignored:', kw, e);
           }
         }
 

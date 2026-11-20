@@ -19,8 +19,15 @@ export const escapeRegExp = (s) =>
 
 const fastHandleRegex = /^[@\/]?(?<handle>[a-zA-Z0-9_]{1,15})$/v;
 
+const keywordRegexPattern = /^\/(?<pattern>.+)\/(?<flags>[a-zA-Z]*)$/v;
+
 export function isKeywordRegex(k) {
-  return typeof k === 'string' && k.length >= 3 && /^\/.+\/[a-zA-Z]*$/v.test(k);
+  return typeof k === 'string' && keywordRegexPattern.test(k);
+}
+
+export function compileKeywordRegex(k) {
+  const m = typeof k === 'string' && keywordRegexPattern.exec(k);
+  return m ? new RegExp(m.groups.pattern, m.groups.flags.replace(/[gy]/gv, '')) : null;
 }
 
 const categoryHeaderRegex = /^#(?:\s*\[(?<bracketName>[^\]]+)\]|\s+(?<spaceName>\S+.*))$/v;

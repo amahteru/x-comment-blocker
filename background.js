@@ -117,6 +117,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.blockedCount) {
     inMemoryBlockedCount = changes.blockedCount.newValue ?? 0;
   }
+
+  if (changes.whitelist) {
+    autoBlockManager.whitelistSet = new Set(changes.whitelist.newValue ?? []);
+  }
+
+  if (changes.blockedUsersOnX) {
+    autoBlockManager.blockedUsersSet = new Set(changes.blockedUsersOnX.newValue ?? []);
+  }
 });
 
 async function doSync() {
@@ -174,6 +182,7 @@ class AutoBlockManager {
 
   queue = [];
   blockedUsersSet = new Set();
+  whitelistSet = new Set();
   retryCounts = new Map();
   countToday = 0;
   batchCount = 0;
@@ -205,6 +214,7 @@ class AutoBlockManager {
         'autoBlockPausedUntil',
         'autoBlockBatchCount',
         'blockedUsersOnX',
+        'whitelist',
       ),
     );
 
@@ -214,6 +224,7 @@ class AutoBlockManager {
     this.pausedUntil = items.autoBlockPausedUntil ?? 0;
     this.batchCount = items.autoBlockBatchCount ?? 0;
     this.blockedUsersSet = new Set(items.blockedUsersOnX ?? []);
+    this.whitelistSet = new Set(items.whitelist ?? []);
   }
 
   async init() {
@@ -231,12 +242,26 @@ class AutoBlockManager {
     await chrome.storage.local.set(updates);
   }
 
+  async updateBlockedUser(screenName, isBlock, extraUpdates = {}) {
+    await this.init();
+    this.blockedUsersSet[isBlock ? 'add' : 'delete'](screenName);
+    if (this.blockedUsersSet.size > 10000) {
+      const dropCount = this.blockedUsersSet.size - 10000;
+      this.blockedUsersSet = new Set(this.blockedUsersSet.values().drop(dropCount));
+    }
+    await this.saveState({ ...extraUpdates, blockedUsersOnX: Array.from(this.blockedUsersSet) });
+  }
+
   async enqueueBatch(screenNames) {
     await this.init();
     if (!screenNames || screenNames.length === 0) return 0;
 
     const validNames = Array.from(new Set(screenNames.map(extractCleanScreenName))).filter(
-      (name) => name && !this.queue.includes(name) && !this.blockedUsersSet.has(name),
+      (name) =>
+        name &&
+        !this.queue.includes(name) &&
+        !this.blockedUsersSet.has(name) &&
+        !this.whitelistSet.has(name),
     );
 
     if (validNames.length > 0) {
@@ -288,6 +313,8 @@ class AutoBlockManager {
           const currentItem = this.queue.shift();
           await this.saveState({ autoBlockQueue: this.queue });
 
+          if (this.whitelistSet.has(currentItem)) continue;
+
           let outcome = null;
           let failReason = '';
           let pauseUntil = 0;
@@ -315,18 +342,10 @@ class AutoBlockManager {
             this.retryCounts.delete(currentItem);
             this.countToday++;
             this.batchCount++;
-            this.blockedUsersSet.add(currentItem);
-
-            if (this.blockedUsersSet.size > 10000) {
-              const dropCount = this.blockedUsersSet.size - 10000;
-              this.blockedUsersSet = new Set(this.blockedUsersSet.values().drop(dropCount));
-            }
-
-            await this.saveState({
+            await this.updateBlockedUser(currentItem, true, {
               autoBlockQueue: this.queue,
               autoBlockToday: this.countToday,
               autoBlockBatchCount: this.batchCount,
-              blockedUsersOnX: Array.from(this.blockedUsersSet),
             });
           } else if (outcome === 'rate-limited') {
             console.warn('[X-Blocker] API rate limited (429). Pausing auto block for 15 mins.');
@@ -397,12 +416,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     doSync().then(sendResponse);
     return true;
   }
-  if (message.action === 'blockUserOnX') {
-    handleBlockUser(message.screenName, true).then(sendResponse);
-    return true;
-  }
-  if (message.action === 'unblockUserOnX') {
-    handleBlockUser(message.screenName, false).then(sendResponse);
+  if (message.action === 'blockUserOnX' || message.action === 'unblockUserOnX') {
+    handleBlockUser(message.screenName, message.action === 'blockUserOnX', true).then(sendResponse);
     return true;
   }
   if (message.action === 'blockAllHistoryUsers') {
@@ -543,7 +558,7 @@ async function handleRecordSpam(items) {
   }
 }
 
-async function handleBlockUser(screenName, isBlock) {
+async function handleBlockUser(screenName, isBlock, persist = false) {
   try {
     const cleanName = extractCleanScreenName(screenName);
     if (!cleanName) {
@@ -586,6 +601,7 @@ async function handleBlockUser(screenName, isBlock) {
           return { success: false, reason: `API 错误: ${messages}`, permanent: isPermanent };
         }
       } catch {}
+      if (persist) await autoBlockManager.updateBlockedUser(cleanName, isBlock);
       return { success: true, screenName: cleanName };
     } else {
       return {

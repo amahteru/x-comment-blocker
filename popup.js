@@ -1,5 +1,6 @@
 import {
   browserApi as chrome,
+  compileKeywordRegex,
   escapeRegExp,
   extractCleanScreenName,
   getLocalDateString,
@@ -122,6 +123,17 @@ async function autoSave() {
   showStatus('已自动保存');
 }
 
+async function saveAutoBlockKeywords() {
+  autoBlockCount.textContent = autoBlockKeywords.size;
+  await chrome.storage.local.set({ autoBlockKeywords: Array.from(autoBlockKeywords) });
+  showStatus('已自动保存');
+}
+
+function toggleAutoBlockKeyword(kw, enabled) {
+  autoBlockKeywords[enabled ? 'add' : 'delete'](kw);
+  saveAutoBlockKeywords();
+}
+
 editAutoBlockBtn.addEventListener('click', () => {
   isEditingAutoBlock = true;
   editAutoBlockBtn.style.display = 'none';
@@ -133,7 +145,6 @@ saveAutoBlockBtn.addEventListener('click', () => {
   isEditingAutoBlock = false;
   saveAutoBlockBtn.style.display = 'none';
   editAutoBlockBtn.style.display = 'inline-flex';
-  autoSave();
   renderUserKeywords();
 });
 
@@ -230,13 +241,7 @@ function renderUserKeywords(animateIndex = -1, fadeIndex = -1) {
         type: 'checkbox',
         className: 'tag-checkbox',
         checked: isAutoBlock,
-        onchange: (e) => {
-          if (e.target.checked) {
-            autoBlockKeywords.add(kw);
-          } else {
-            autoBlockKeywords.delete(kw);
-          }
-        },
+        onchange: (e) => toggleAutoBlockKeyword(kw, e.target.checked),
       });
       tagChildren = [el('span', { className: 'tag-text', textContent: kw, title: kw }), checkbox];
     } else {
@@ -301,11 +306,23 @@ function startEdit(tagEl, index) {
   input.select();
 }
 
+function validateKeywords(kws, inputEl) {
+  try {
+    for (const kw of kws) compileKeywordRegex(kw);
+    return true;
+  } catch {
+    showStatus('正则表达式语法错误');
+    inputEl.focus();
+    return false;
+  }
+}
+
 function confirmEdit(inputEl, index) {
   const inputKws = parseKeywords(inputEl.value);
   let changed = false;
   if (inputKws.length > 0) {
     const newVal = inputKws.at(0);
+    if (!validateKeywords([newVal], inputEl)) return;
     const existingIndex = userKeywords.indexOf(newVal);
     if (existingIndex === -1 || existingIndex === index) {
       if (userKeywords[index] !== newVal) {
@@ -327,7 +344,7 @@ function confirmEdit(inputEl, index) {
 
 function addKeyword() {
   const inputKws = parseKeywords(newKeywordInput.value);
-  if (inputKws.length === 0) return;
+  if (inputKws.length === 0 || !validateKeywords(inputKws, newKeywordInput)) return;
 
   const newKws = new Set(inputKws).difference(new Set(userKeywords));
 
@@ -733,13 +750,7 @@ async function renderCloudKeywords() {
         type: 'checkbox',
         className: 'tag-checkbox',
         checked: isAutoBlock,
-        onchange: (e) => {
-          if (e.target.checked) {
-            autoBlockKeywords.add(kw);
-          } else {
-            autoBlockKeywords.delete(kw);
-          }
-        },
+        onchange: (e) => toggleAutoBlockKeyword(kw, e.target.checked),
       });
       tagChildren = [textSpan, checkbox];
     } else {
@@ -805,6 +816,14 @@ if (toggleCloudSearchBtn && cloudSearchContainer && cloudSearchInput) {
   });
 }
 
+function exitCloudAutoBlockEdit() {
+  isEditingCloudAutoBlock = false;
+  saveCloudAutoBlockBtn.style.display = 'none';
+  if (selectAllCloudBtn) selectAllCloudBtn.style.display = 'none';
+  editCloudAutoBlockBtn.style.display = 'inline-flex';
+  if (filterCloudBtn) filterCloudBtn.style.display = 'inline-flex';
+}
+
 if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
   editCloudAutoBlockBtn.addEventListener('click', () => {
     isEditingCloudAutoBlock = true;
@@ -817,12 +836,7 @@ if (editCloudAutoBlockBtn && saveCloudAutoBlockBtn) {
   });
 
   saveCloudAutoBlockBtn.addEventListener('click', () => {
-    isEditingCloudAutoBlock = false;
-    saveCloudAutoBlockBtn.style.display = 'none';
-    if (selectAllCloudBtn) selectAllCloudBtn.style.display = 'none';
-    editCloudAutoBlockBtn.style.display = 'inline-flex';
-    if (filterCloudBtn) filterCloudBtn.style.display = 'inline-flex';
-    autoSave();
+    exitCloudAutoBlockEdit();
     renderCloudKeywords();
     renderUserKeywords();
   });
@@ -860,6 +874,7 @@ if (selectAllCloudBtn) {
       autoBlockKeywords[allSelected ? 'delete' : 'add'](kw);
     });
 
+    await saveAutoBlockKeywords();
     renderCloudKeywords();
   });
 }
@@ -873,11 +888,8 @@ closeCloudBtn.addEventListener('click', () => {
   cloudModal.classList.remove('open');
   cloudFilterDropdown?.classList.remove('open');
   if (isEditingCloudAutoBlock) {
-    isEditingCloudAutoBlock = false;
-    saveCloudAutoBlockBtn.style.display = 'none';
-    if (selectAllCloudBtn) selectAllCloudBtn.style.display = 'none';
-    editCloudAutoBlockBtn.style.display = 'inline-flex';
-    if (filterCloudBtn) filterCloudBtn.style.display = 'inline-flex';
+    exitCloudAutoBlockEdit();
+    renderUserKeywords();
   }
   clearTimeout(cloudSearchDebounceTimer);
   if (cloudSearchContainer?.classList.contains('open')) {
@@ -1064,7 +1076,7 @@ if (blockAllHistoryBtn) {
 
     const usersToBlock = Array.from(
       new Set(filteredHistory.map((item) => extractCleanScreenName(item.user)).filter(Boolean)),
-    );
+    ).filter((name) => !whitelist.includes(name));
 
     if (usersToBlock.length === 0) {
       showStatus('当前列表没有可拉黑的用户');
@@ -1395,19 +1407,7 @@ function renderHistoryPage() {
           const action = isCurrentlyBlocked ? 'unblockUserOnX' : 'blockUserOnX';
           const res = await chrome.runtime.sendMessage({ action, screenName });
           if (res?.success) {
-            const currentItems = await chrome.storage.local.get(
-              getStorageDefaults('blockedUsersOnX'),
-            );
-            let currentList = currentItems.blockedUsersOnX ?? [];
-
-            if (!isCurrentlyBlocked) {
-              if (!currentList.includes(screenName)) currentList.push(screenName);
-            } else {
-              currentList = currentList.filter((u) => u !== screenName);
-            }
-
-            await chrome.storage.local.set({ blockedUsersOnX: currentList });
-            currentBlockedUsersOnXSet = new Set(currentList);
+            currentBlockedUsersOnXSet[isCurrentlyBlocked ? 'delete' : 'add'](screenName);
           } else {
             showStatus(res?.reason || '操作失败');
           }
